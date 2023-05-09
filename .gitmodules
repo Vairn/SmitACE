@@ -1,0 +1,4 @@
+[submodule "deps/ACE"]
+	path = deps/ACE
+	url = https://github.com/Vairn/ACE.git
+	branch = AGA
