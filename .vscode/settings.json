@@ -1,0 +1,47 @@
+{
+	"files.associations": {
+		"*.make": "makefile",
+		"*.cmake": "cmake",
+		"main.h": "c",
+		"blit.h": "c",
+		"bitmap.h": "c",
+		"palette.h": "c",
+		"screen.h": "c",
+		"system.h": "c",
+		"XPLAY.C": "cpp",
+		"game.h": "c",
+		"file.h": "c",
+		"string.h": "c",
+		"memory.h": "c",
+		"gcc8_c_support.h": "c",
+		"stdlib.h": "c",
+		"endian.h": "c",
+		"common.h": "c",
+		"joy.h": "c",
+		"c2p.h": "c",
+		"stdint.h": "c",
+		"stdint-gcc.h": "c",
+		"timinterpreter.h": "c",
+		"timfile.h": "c",
+		"key.h": "c",
+		"custom.h": "c",
+		"stddef.h": "c",
+		"mini_std.h": "c",
+		"scrollbuffer.h": "c",
+		"tilebuffer.h": "c",
+		"stdio.h": "c",
+		"ghostbusters.h": "c",
+		"ptplayer.h": "c",
+		"city8x.h": "c",
+		"simplebuffer.h": "c",
+		"wanderer.h": "c",
+		"rand.h": "c",
+		"misc.h": "c",
+		"smite.h": "c"
+	},
+	"cmake.configureOnOpen": false,
+	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"
+	// "cmake.configureSettings": {
+	// 	"CMAKE_TOOLCHAIN_FILE" : "C:/Users/Amiga/AmigaDev/LandsOfLore/deps/vcpkg/scripts/buildsystems/vcpkg.cmake"
+	// }
+}

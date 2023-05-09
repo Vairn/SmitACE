@@ -1,0 +1,54 @@
+{
+	"kind" : "toolchains",
+	"toolchains" : 
+	[
+		{
+			"compiler" : 
+			{
+				"id" : "GNU",
+				"implicit" : {},
+				"path" : "c:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/bin/m68k-amiga-elf-gcc.exe",
+				"version" : ""
+			},
+			"language" : "ASM",
+			"sourceFileExtensions" : 
+			[
+				"s",
+				"S",
+				"asm"
+			]
+		},
+		{
+			"compiler" : 
+			{
+				"id" : "GNU",
+				"implicit" : 
+				{
+					"includeDirectories" : 
+					[
+						"C:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/lib/gcc/m68k-amiga-elf/12.2.0/include",
+						"C:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/lib/gcc/m68k-amiga-elf/12.2.0/include-fixed",
+						"C:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/m68k-amiga-elf/sys-include",
+						"C:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/m68k-amiga-elf/include"
+					],
+					"linkDirectories" : [],
+					"linkFrameworkDirectories" : [],
+					"linkLibraries" : []
+				},
+				"path" : "c:/Users/Adam Templeton/.vscode/extensions/bartmanabyss.amiga-debug-1.7.1/bin/win32/opt/bin/m68k-amiga-elf-gcc.exe",
+				"version" : "12.2.0"
+			},
+			"language" : "C",
+			"sourceFileExtensions" : 
+			[
+				"c",
+				"m"
+			]
+		}
+	],
+	"version" : 
+	{
+		"major" : 1,
+		"minor" : 0
+	}
+}

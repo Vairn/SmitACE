@@ -1,0 +1,23 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"type": "amiga",
+			"request": "launch",
+			"name": "Amiga 500",
+			"config": "A500",
+			"program": "${workspaceFolder}/build/lore",
+			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-130.rom",
+			"internalConsoleOptions": "openOnSessionStart"
+		},
+		{
+			"type": "amiga",
+			"request": "launch",
+			"name": "Amiga 1200",
+			"config": "A1200",
+			"program": "${workspaceFolder}/build/lore",
+			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
+			"internalConsoleOptions": "openOnSessionStart"
+		}
+	]
+}
