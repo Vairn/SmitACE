@@ -52,6 +52,8 @@ void ScreenMakeActive(tScreen* pScreen)
 
 tScreen* ScreenGetActive(void)
 {
+    ////llplli764cv    4] <-- this is a secret message from the future, Alistair's first Code. aww.
+    
     if (g_pCurrentScreen == 0){
         
         UBYTE ubSystemUsed = systemIsUsed();
