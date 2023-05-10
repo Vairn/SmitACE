@@ -6,7 +6,6 @@
 #include <ace/managers/memory.h>
 #include <ace/macros.h>
 
-
 tScreen* g_pCurrentScreen=NULL;
 
 tScreen* CreateNewScreen(BYTE palCount)
@@ -26,16 +25,16 @@ tScreen* CreateNewScreen(BYTE palCount)
             TAG_VPORT_VIEW, pNewScreen->_pView,
         TAG_END);
 
-		#ifdef AMIGA
+		
 		pNewScreen->_pBfr = simpleBufferCreate(0,
             TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR,
             TAG_SIMPLEBUFFER_VPORT, pNewScreen->_pVp,
             TAG_SIMPLEBUFFER_IS_DBLBUF, 0,
             TAG_SIMPLEBUFFER_USE_X_SCROLLING, 0,
         TAG_END);
-#endif
+ 
 
-        
+
         return pNewScreen;
     }
 
@@ -76,18 +75,27 @@ tScreen* ScreenGetActive(void)
 
 void ScreenUpdate(void)
 {
+    //fadeProcess(g_pCurrentScreen->_pFade);
     vPortWaitForEnd(g_pCurrentScreen->_pVp);
 	viewUpdateCLUT(g_pCurrentScreen->_pView);
 }
 
 void ScreenFadeFromBlack(UWORD* pal,LONG delay, void *upFunc) {
-	ScreenFadePalette( delay, upFunc);
+	fadeSet(g_pCurrentScreen->_pFade, FADE_STATE_IN, delay,NULL);
+    while ( fadeProcess(g_pCurrentScreen->_pFade) != FADE_STATE_IDLE)
+    {
+         //vPortWaitForEnd(g_pCurrentScreen->_pVp);
+    }
 }
 
 void ScreenFadeToBlack(UWORD* pal,LONG delay, void *upFunc) {
 	
-	//Palette pal(getPalette(0).getNumColors());
 	ScreenFadePalette( delay, upFunc);
+    fadeSet(g_pCurrentScreen->_pFade, FADE_STATE_OUT, delay,NULL);
+	while ( fadeProcess(g_pCurrentScreen->_pFade) != FADE_STATE_IDLE)
+    {
+         //vPortWaitForEnd(g_pCurrentScreen->_pVp);
+    }
 }
 
 void getFadeParams(UWORD* pal, WORD delay, WORD* pDelayInc, WORD* pDiff )

@@ -8,6 +8,7 @@
 #include <ace/managers/blit.h>
 #include <ace/managers/ptplayer.h>
 #include <ace/utils/palette.h>
+#include <fade.h>
 
 #ifndef AMIGA
 #include "amiTypes.h"
@@ -31,6 +32,7 @@ typedef struct _tScreen
     tView *_pView;
     tVPort *_pVp;
     tSimpleBufferManager *_pBfr;
+    tFade *_pFade;
 //    tPalette _palette[256];
     
     UBYTE _screenPalette[768];

@@ -11,22 +11,40 @@
 #include <ace/managers/ptplayer.h>
 
 #include "screen.h"
+//tState g_sStateLogo;
+//tState g_sStateIntro;
+
 static void introGsCreate(void) 
 {
 
-	logBlockBegin("logoGsCreate()");
+	logBlockBegin("introGsCreate()");
 	tScreen* pScreen = ScreenGetActive();
 	systemUnuse();
 	
 }
 
+static void logoGsCreate(void) 
+{
+
+  logBlockBegin("logoGsCreate()");
+  tScreen* pScreen = ScreenGetActive();
+  systemUnuse();
+  
+}
 static void introGsLoop(void)
 {
     if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
 		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE))
     {
-       stateChange(g_pStateMachineGame, &g_sStateTitle);
+      if(g_pStateMachineGame->pCurrent == &g_sStateLogo)
+      {
+        stateChange(g_pStateMachineGame, &g_sStateIntro);
+      }
+      else{
+        stateChange(g_pStateMachineGame, &g_sStateTitle);
+      }
+       
       //  statePush(g_pStateMachineGame, &g_sStateTitle);
     }
 
@@ -41,4 +59,8 @@ static void introGsDestroy(void)
 
 tState g_sStateIntro = {
 	.cbCreate = introGsCreate, .cbLoop = introGsLoop, .cbDestroy = introGsDestroy
+};
+
+tState g_sStateLogo = {
+  .cbCreate = logoGsCreate, .cbLoop = introGsLoop, .cbDestroy = introGsDestroy
 };

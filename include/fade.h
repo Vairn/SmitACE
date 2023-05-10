@@ -10,6 +10,7 @@
 typedef enum _tFadeState {
 	FADE_STATE_IN,
 	FADE_STATE_OUT,
+	FADE_STATE_PALETTE,
 	FADE_STATE_IDLE,
 	FADE_STATE_EVENT_FIRED
 } tFadeState;
@@ -21,7 +22,7 @@ typedef struct _tFade {
 	UBYTE ubColorCount;
 	UBYTE ubCnt;
 	UBYTE ubCntEnd;
-	UWORD pPaletteRef[32];
+	UWORD* pPaletteRef;
 	tCbFadeOnDone cbOnDone;
 	tView *pView;
 } tFade;
