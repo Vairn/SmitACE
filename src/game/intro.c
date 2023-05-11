@@ -19,8 +19,16 @@ static void introGsCreate(void)
 
 	logBlockBegin("introGsCreate()");
 	tScreen* pScreen = ScreenGetActive();
+  //UWORD pPaletteRef[256];
+	paletteLoad("data/jamelogo.plt", pScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromFile("data/jamelogo.bm", 0);
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pBack,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
 	systemUnuse();
-	
+  ScreenFadeFromBlack(NULL, 7, 0);
 }
 
 static void logoGsCreate(void) 
@@ -28,8 +36,17 @@ static void logoGsCreate(void)
 
   logBlockBegin("logoGsCreate()");
   tScreen* pScreen = ScreenGetActive();
+  paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromFile("data/dt.bm", 0);
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pBack,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
+	
+      
   systemUnuse();
-  
+  ScreenFadeFromBlack(NULL, 7, 0);
 }
 static void introGsLoop(void)
 {
@@ -53,6 +70,7 @@ static void introGsLoop(void)
 
 static void introGsDestroy(void)
 {
+  ScreenFadeToBlack(NULL, 7, 0);
     // unload stuff here
 }
 

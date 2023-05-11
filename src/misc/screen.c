@@ -33,7 +33,7 @@ tScreen* CreateNewScreen(BYTE palCount)
             TAG_SIMPLEBUFFER_USE_X_SCROLLING, 0,
         TAG_END);
  
-
+        pNewScreen->_pFade = fadeCreate(pNewScreen->_pView, pNewScreen->_pView->pFirstVPort->pPalette,255);
 
         return pNewScreen;
     }
@@ -77,7 +77,8 @@ void ScreenUpdate(void)
 {
     //fadeProcess(g_pCurrentScreen->_pFade);
     vPortWaitForEnd(g_pCurrentScreen->_pVp);
-	viewUpdateCLUT(g_pCurrentScreen->_pView);
+
+
 }
 
 void ScreenFadeFromBlack(UWORD* pal,LONG delay, void *upFunc) {
@@ -90,7 +91,7 @@ void ScreenFadeFromBlack(UWORD* pal,LONG delay, void *upFunc) {
 
 void ScreenFadeToBlack(UWORD* pal,LONG delay, void *upFunc) {
 	
-	ScreenFadePalette( delay, upFunc);
+//	ScreenFadePalette( delay, upFunc);
     fadeSet(g_pCurrentScreen->_pFade, FADE_STATE_OUT, delay,NULL);
 	while ( fadeProcess(g_pCurrentScreen->_pFade) != FADE_STATE_IDLE)
     {

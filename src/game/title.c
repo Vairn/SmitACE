@@ -18,9 +18,17 @@ static void titleGsCreate(void)
 	logBlockBegin("titleGsCreate()");
 	systemUse();
 	
-    // load stuff here
-    systemUnuse();
-	
+	tScreen* pScreen = ScreenGetActive();
+  //UWORD pPaletteRef[256];
+	paletteLoad("data/title.plt", pScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromFile("data/title.bm", 0);
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pBack,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
+	systemUnuse();
+  ScreenFadeFromBlack(NULL, 7, 0);
 	
 }
 
@@ -42,6 +50,7 @@ static void titleGsLoop(void)
 static void titleGsDestroy(void)
 {
     // unload stuff here
+    ScreenFadeToBlack(NULL, 7, 0);
 }
 
 
