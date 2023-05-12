@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 3.14.0)
 project(Smite LANGUAGES ASM C)
 
 set(CMAKE_C_STANDARD 11)
-
-file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c include/*.h)
+set(M68K_CPU "68020")
+file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 
 
 
