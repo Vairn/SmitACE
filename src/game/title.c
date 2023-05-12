@@ -27,6 +27,7 @@ static void titleGsCreate(void)
 		0,0,
     320, 256, MINTERM_COOKIE
 	);
+  bitmapDestroy(pLogo);
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);
 	
@@ -38,8 +39,8 @@ static void titleGsLoop(void)
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
 		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE))
     {
-       gameExit();
-       //stateChange(g_pStateMachineGame, &g_sStateTitle);
+       //gameExit();
+       stateChange(g_pStateMachineGame, &g_sStateGame);
       //  statePush(g_pStateMachineGame, &g_sStateTitle);
     }
 

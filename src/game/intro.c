@@ -29,6 +29,7 @@ static void introGsCreate(void)
 	);
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);
+  bitmapDestroy(pLogo);
 }
 
 static void logoGsCreate(void) 
@@ -46,7 +47,8 @@ static void logoGsCreate(void)
 	
       
   systemUnuse();
-  ScreenFadeFromBlack(NULL, 7, 0);
+  ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
+  bitmapDestroy(pLogo);
 }
 static void introGsLoop(void)
 {
