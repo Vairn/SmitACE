@@ -51,6 +51,8 @@ void ScreenUpdate(void);
 
 void ScreenFadePalette(LONG delay, void* pFunc);
 
+void ScreenFadeFromBlack(UWORD* pal,LONG delay, void *upFunc);
+void ScreenFadeToBlack(UWORD* pal,LONG delay, void *upFunc);
 UWORD* ScreenGetPalette();
 void ScreenClose();
 #endif // AMIGA
