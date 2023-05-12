@@ -33,3 +33,5 @@
 
 build/
 dist/
+res/
+.vscode/
