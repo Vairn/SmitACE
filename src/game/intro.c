@@ -45,11 +45,9 @@ static void logoGsCreate(void)
 		0,0,
     320, 256, MINTERM_COOKIE
 	);
-	
-      
-  systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
   bitmapDestroy(pLogo);
+  systemUnuse();
 }
 static void introGsLoop(void)
 {
