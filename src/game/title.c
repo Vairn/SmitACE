@@ -9,7 +9,7 @@
 #include <ace/managers/blit.h>
 #include <ace/utils/palette.h>
 #include <ace/managers/ptplayer.h>
-
+#include <ace/managers/mouse.h>
 #include "screen.h"
 
 static void titleGsCreate(void) 
@@ -37,7 +37,7 @@ static void titleGsLoop(void)
 {
     if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
-		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE))
+		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE) || mouseUse(MOUSE_PORT_1, MOUSE_LMB) || mouseUse(MOUSE_PORT_1, MOUSE_RMB))
     {
        //gameExit();
        stateChange(g_pStateMachineGame, &g_sStateGame);

@@ -30,10 +30,10 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
         pMaze->_mazeCol[pEvent->_x + pEvent->_y * pMaze->_width] = 0;
         break;
     case EVENT_SHOWMESSAGE:
-
+        
         break;
     case EVENT_OPENDOOR:
-
+        
         break;
     case EVENT_CLOSEDOOR:
 
