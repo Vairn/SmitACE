@@ -12,6 +12,9 @@ tWallset* wallsetLoad(const char* fileName)
         UBYTE paletteSize = 0;
         UBYTE* palette = 0;
         tWallGfx** tileset = 0;
+        UBYTE header[3];
+        fileRead(pFile, header, 3);
+
         fileRead(pFile, &paletteSize, 1);
         palette = (UBYTE*)memAllocFastClear(paletteSize * 3);
         fileRead(pFile, palette, paletteSize * 3);
@@ -25,14 +28,14 @@ tWallset* wallsetLoad(const char* fileName)
         tileset = (tWallGfx**)memAllocFastClear(sizeof(tWallGfx*) * totalTilesetCount);
         for (int i = 0; i < totalTilesetCount; i++)
         {
-            WORD location[2] = { 0 };
+            BYTE location[2] = { 0 };
             WORD screen[2] = { 0 };
             UWORD width = 0;
             UWORD height = 0;
             UBYTE type = 0;
             tBitMap* gfx = 0;
             fileRead(pFile, &type, 1);
-            fileRead(pFile, location, 4);
+            fileRead(pFile, location, 2);
             fileRead(pFile, screen, 4);
             fileRead(pFile, &width, 2);
             fileRead(pFile, &height, 2);

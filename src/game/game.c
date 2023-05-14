@@ -1,6 +1,7 @@
 #include "game.h"
 
 #include <ace/managers/key.h>
+#include "wallset.h"
 #include "maze.h"
 #include "script.h"
 
@@ -24,6 +25,8 @@ static void gameGsCreate(void) {
      mazeSave(g_pCurrentMaze, "data/MAZE.DAT");
      mazeDelete(g_pCurrentMaze);
      g_pCurrentMaze = mazeLoad("data/MAZE.DAT");
+
+    tWallset* pWallset = wallsetLoad("data/factory.wll");
     systemUnuse();
 }
 
