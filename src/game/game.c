@@ -1,12 +1,15 @@
 #include "game.h"
 
 #include <ace/managers/key.h>
-#include "wallset.h"
-#include "maze.h"
-#include "script.h"
+#include "gameState.h"
+#include "screen.h"
 
-tMaze *g_pCurrentMaze = NULL;
+
 static void gameGsCreate(void) {
+    	systemUse();
+	
+	tScreen* pScreen = ScreenGetActive();
+ 
     g_pCurrentMaze = mazeCreate(32,32);
     for(int i = 0; i < 32; i++) {
         for(int j = 0; j < 32; j++) {
@@ -31,6 +34,8 @@ static void gameGsCreate(void) {
 }
 
 static void gameGsLoop(void) {
+    
+  ScreenUpdate();
     gameExit();
 }
 
