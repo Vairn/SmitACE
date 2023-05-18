@@ -54,11 +54,6 @@ if(GAME_DEBUG)
 endif()
 
 
-if(GAME_DEBUG)
-	target_compile_definitions(${PAK_EXECUTABLE} PRIVATE GAME_DEBUG)
-	target_compile_definitions(ace PUBLIC ACE_DEBUG_ALL ACE_DEBUG_UAE)
-endif()
-
 
 set(RES_DIR ${CMAKE_CURRENT_LIST_DIR}/res)
 set(DATA_DIR ${CMAKE_CURRENT_BINARY_DIR}/data)
