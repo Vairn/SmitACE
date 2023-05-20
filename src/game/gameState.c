@@ -8,6 +8,7 @@ tGameState *g_pGameState= NULL;
 
 UBYTE LoadGameState(const char* fileName)
 {
+
     // Failed to Load Game State
     return 0;
 }
@@ -25,15 +26,15 @@ void FreeGameState()
     }
     if (g_pCurrentWallset)
     {
-        wallsetDelete(g_pCurrentWallset);
+        wallsetDestroy(g_pCurrentWallset);
         g_pCurrentWallset = NULL;
     }
     if (g_pCurrentParty)
     {
-        partyDelete(g_pCurrentParty);
+        characterPartyDestroy(g_pCurrentParty);
         g_pCurrentParty = NULL;
     }
-    free(g_pGameState);
+    FreeMem(g_pGameState, sizeof(tGameState));
     g_pGameState = NULL;
     
 }
