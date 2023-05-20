@@ -76,7 +76,13 @@ tScreen* ScreenGetActive(void)
 void ScreenUpdate(void)
 {
     //fadeProcess(g_pCurrentScreen->_pFade);
+    viewProcessManagers(g_pCurrentScreen->_pView);
+	copProcessBlocks();
+	systemIdleBegin();
+	vPortWaitUntilEnd(g_pCurrentScreen->_pVp);
+	systemIdleEnd();
     vPortWaitForEnd(g_pCurrentScreen->_pVp);
+   
 
 
 }
