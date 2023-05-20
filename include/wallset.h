@@ -19,10 +19,13 @@ typedef struct _wallGfx
 {
     WORD _location[2];
     WORD _screen[2];
+    UWORD _x;
+    UWORD _y;
     UWORD _width;
     UWORD _height;
     UBYTE _type;
     tBitMap* _gfx;
+    tBitMap* _mask;
 
 } tWallGfx;
 
@@ -33,7 +36,8 @@ typedef struct _wallset
     UBYTE _paletteSize;
     UBYTE* _palette;
     tWallGfx** _tileset;
-
+    tBitMap* _gfx;
+    tBitMap* _mask;
 
 } tWallset;
 
