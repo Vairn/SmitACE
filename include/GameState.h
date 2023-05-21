@@ -3,11 +3,10 @@
 #include "wallset.h"
 #include "character.h"
 #include "script.h"
+
 #include <ace/managers/state.h>
 
-extern tMaze *g_pCurrentMaze;
-extern tWallset *g_pCurrentWallset;
-extern tCharacterParty *g_pCurrentParty;
+
 
 typedef struct _tGameState
 {
@@ -18,7 +17,9 @@ typedef struct _tGameState
 
     UBYTE m_bGlobalFlags[256];
     UBYTE m_bLocalFlags[256];
-    
+    tMaze *m_pCurrentMaze;
+    tWallset *m_pCurrentWallset;
+    tCharacterParty *m_pCurrentParty;    
 } tGameState;
 
 extern tGameState *g_pGameState;

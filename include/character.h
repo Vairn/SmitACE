@@ -63,6 +63,12 @@ typedef struct _characterParty
 {
     UBYTE _numCharacters;
     tCharacter** _characters; // dynamic list of Characters
+
+    UBYTE _numActiveCharacters;
+    UBYTE _PartyX;
+    UBYTE _PartyY;
+    UBYTE _PartyFacing;
+    
 } tCharacterParty;
 
 tCharacter* characterCreate();

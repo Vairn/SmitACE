@@ -152,8 +152,6 @@ tWallset *wallsetLoad(const char *fileName)
                 tileset[i]->_width = width;
                 tileset[i]->_height = height;
                 tileset[i]->_type = type;
-                tileset[i]->_gfx = bitmapCreate(width,height,6,BMF_INTERLEAVED | BMF_CLEAR);
-                tileset[i]->_mask = bitmapCreate(width,height,6,BMF_INTERLEAVED | BMF_CLEAR);
                 i++;
             }
             // tileset[i]->_gfx = gfx;
