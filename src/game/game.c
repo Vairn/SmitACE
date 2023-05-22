@@ -39,6 +39,11 @@ static void gameGsCreate(void)
         {
             if (i == 0 || j == 0 || i == 31 || j == 31)
                 mazeSetCell(g_pGameState->m_pCurrentMaze, i, j, 1);
+            else
+            {
+                UBYTE isWall = rand() % 5 > 3 ? 1 : 0;
+                mazeSetCell(g_pGameState->m_pCurrentMaze, i, j, isWall);
+            }
         }
     }
 
@@ -67,13 +72,17 @@ static void gameGsCreate(void)
     {
         blitCopyMask(pWallset->_gfx, pWallset->_tileset[i]->_x, pWallset->_tileset[i]->_y, pBackground, pWallset->_tileset[i]->_screen[0], pWallset->_tileset[i]->_screen[1], pWallset->_tileset[i]->_width, pWallset->_tileset[i]->_height, (UWORD *)pWallset->_mask->Planes[0]);
     }
-    paletteLoad("data/playfield.plt", pScreen->_pView->pFirstVPort->pPalette, 64);
+    paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
     viewUpdateCLUT(pScreen->_pView);
 
     tBitMap* pPlayfield = bitmapCreateFromFile("data/playfield.bm",0);
     blitCopy(pPlayfield,0,0,pScreen->_pBfr->pBack,0,0,320,256,MINTERM_COPY);
     ScreenUpdate();
     blitCopy(pPlayfield,0,0,pScreen->_pBfr->pBack,0,0,320,256,MINTERM_COPY);
+    bitmapDestroy(pPlayfield);
+     blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
+     drawView(g_pGameState, pScreen->_pBfr->pBack);
+    ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
 }
 
 static void gameGsLoop(void)
@@ -138,12 +147,14 @@ static void gameGsLoop(void)
         g_pGameState->m_pCurrentParty->_PartyFacing++;
         g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
     }
+    blitWait();
     ScreenUpdate();
 
 }
 
 static void gameGsDestroy(void)
 {
+    ScreenFadeToBlack(NULL, 7, 0);
 }
 tState g_sStateGame = {
     .cbCreate = gameGsCreate, .cbLoop = gameGsLoop, .cbDestroy = gameGsDestroy};

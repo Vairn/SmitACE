@@ -78,8 +78,20 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
         break;
     }
 
-    pParty->_PartyX =x;
-    pParty->_PartyY =y;
-    // Failed to Move
+    if (x < 0 || x >= pMaze->_width || y < 0 || y >= pMaze->_height)
+    {
+        // Failed to Move
+        return 0;
+    }
+
+    UWORD nazeOffset = (y)*pMaze->_width + (x);
+    if (pMaze->_mazeData[nazeOffset] == 0)
+    {
+        pParty->_PartyX =x;
+        pParty->_PartyY =y;
+        // Moved
+        return 1;
+    }
+
     return 0;
 }

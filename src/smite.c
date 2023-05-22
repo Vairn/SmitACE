@@ -7,11 +7,14 @@
 #include <ace/managers/system.h>
 #include <ace/managers/state.h>
 #include <ace/managers/ptplayer.h>
+#include <gcc8_c_support.h>
 tStateManager *g_pStateMachineGame;
+
 
 
 void genericCreate(void) {
 
+	warpmode(0);
 	g_pStateMachineGame = stateManagerCreate();
 	keyCreate();
     mouseCreate(MOUSE_PORT_1);
