@@ -17,7 +17,7 @@
 
 static void introGsCreate(void) 
 {
-
+systemUse();
 	logBlockBegin("introGsCreate()");
 	tScreen* pScreen = ScreenGetActive();
   //UWORD pPaletteRef[256];
@@ -28,6 +28,13 @@ static void introGsCreate(void)
 		0,0,
     320, 256, MINTERM_COOKIE
 	);
+
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pFront,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
+  
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);
   bitmapDestroy(pLogo);
@@ -35,7 +42,7 @@ static void introGsCreate(void)
 
 static void logoGsCreate(void) 
 {
-
+  //systemUse();
   logBlockBegin("logoGsCreate()");
   tScreen* pScreen = ScreenGetActive();
   paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 255);
@@ -45,6 +52,12 @@ static void logoGsCreate(void)
 		0,0,
     320, 256, MINTERM_COOKIE
 	);
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pFront,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
+  
   ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
   bitmapDestroy(pLogo);
   systemUnuse();

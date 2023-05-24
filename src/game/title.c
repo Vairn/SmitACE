@@ -27,6 +27,13 @@ static void titleGsCreate(void)
 		0,0,
     320, 256, MINTERM_COOKIE
 	);
+
+  	blitCopy(
+		pLogo, 0, 0, pScreen->_pBfr->pFront,
+		0,0,
+    320, 256, MINTERM_COOKIE
+	);
+  
   bitmapDestroy(pLogo);
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);

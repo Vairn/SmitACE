@@ -27,8 +27,6 @@ tWallset *pWallset = NULL;
 tBitMap *pBackground = NULL;
 static void gameGsCreate(void)
 {
-    //systemUse();
-
     InitNewGame();
     pScreen = ScreenGetActive();
 
@@ -61,28 +59,37 @@ static void gameGsCreate(void)
     mazeDelete(g_pGameState->m_pCurrentMaze);
     g_pGameState->m_pCurrentMaze = mazeLoad("data/MAZE.DAT");
 
-    pWallset = wallsetLoad("data/factory.wll");
+    pWallset = wallsetLoad("data/factory2.wll");
     g_pGameState->m_pCurrentWallset = pWallset;
-    systemUnuse();
-    systemUnuse();
+
     
-    pBackground = bitmapCreate(240, 180, 6, BMF_INTERLEAVED | BMF_CLEAR);
+    pBackground = bitmapCreate(240, 180, 4, BMF_INTERLEAVED | BMF_CLEAR);
     blitRect(pBackground, 0, 0, 240, 180, 0);
     for (int i = 0; i < 52; i++)
     {
         blitCopyMask(pWallset->_gfx, pWallset->_tileset[i]->_x, pWallset->_tileset[i]->_y, pBackground, pWallset->_tileset[i]->_screen[0], pWallset->_tileset[i]->_screen[1], pWallset->_tileset[i]->_width, pWallset->_tileset[i]->_height, (UWORD *)pWallset->_mask->Planes[0]);
     }
     paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
-    viewUpdateCLUT(pScreen->_pView);
+   
 
     tBitMap* pPlayfield = bitmapCreateFromFile("data/playfield.bm",0);
     blitCopy(pPlayfield,0,0,pScreen->_pBfr->pBack,0,0,320,256,MINTERM_COPY);
-    ScreenUpdate();
-    blitCopy(pPlayfield,0,0,pScreen->_pBfr->pBack,0,0,320,256,MINTERM_COPY);
+    //ScreenUpdate();
+    blitCopy(pPlayfield,0,0,pScreen->_pBfr->pFront,0,0,320,256,MINTERM_COPY);
     bitmapDestroy(pPlayfield);
+    // do an initial render to both front and back.
+
      blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
      drawView(g_pGameState, pScreen->_pBfr->pBack);
+    blitCopy(pBackground, 0, 0, pScreen->_pBfr->pFront, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
+     drawView(g_pGameState, pScreen->_pBfr->pFront);
+
+    systemUnuse();
+    systemUnuse();
+    //viewUpdateCLUT(pScreen->_pView);
+    ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
+        
 }
 
 static void gameGsLoop(void)

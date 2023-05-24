@@ -190,5 +190,12 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
                      currentTile->_screen[0] + SOFFX, currentTile->_screen[1] + SOFFX,
                      currentTile->_width, currentTile->_height,
                      (UWORD *)pWallset->_mask->Planes[0]);
+        blitWait();
+        // blitCopy(pWallset->_gfx,
+        //              currentTile->_x, currentTile->_y,
+        //              pCurrentBuffer,
+        //              currentTile->_screen[0] + SOFFX, currentTile->_screen[1] + SOFFX,
+        //              currentTile->_width, currentTile->_height,
+        //              MINTERM_COOKIE);
     }
 }
