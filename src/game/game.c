@@ -59,11 +59,11 @@ static void gameGsCreate(void)
     mazeDelete(g_pGameState->m_pCurrentMaze);
     g_pGameState->m_pCurrentMaze = mazeLoad("data/MAZE.DAT");
 
-    pWallset = wallsetLoad("data/factory2.wll");
+    pWallset = wallsetLoad("data/factory.wll");
     g_pGameState->m_pCurrentWallset = pWallset;
 
     
-    pBackground = bitmapCreate(240, 180, 4, BMF_INTERLEAVED | BMF_CLEAR);
+    pBackground = bitmapCreate(240, 180, 6, BMF_INTERLEAVED | BMF_CLEAR);
     blitRect(pBackground, 0, 0, 240, 180, 0);
     for (int i = 0; i < 52; i++)
     {
@@ -78,13 +78,12 @@ static void gameGsCreate(void)
     blitCopy(pPlayfield,0,0,pScreen->_pBfr->pFront,0,0,320,256,MINTERM_COPY);
     bitmapDestroy(pPlayfield);
     // do an initial render to both front and back.
-
+    
      blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
      drawView(g_pGameState, pScreen->_pBfr->pBack);
     blitCopy(pBackground, 0, 0, pScreen->_pBfr->pFront, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
      drawView(g_pGameState, pScreen->_pBfr->pFront);
 
-    systemUnuse();
     systemUnuse();
     //viewUpdateCLUT(pScreen->_pView);
     ScreenUpdate();
