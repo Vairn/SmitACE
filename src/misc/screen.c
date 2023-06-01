@@ -26,7 +26,7 @@ tScreen *CreateNewScreen(BYTE palCount)
                                        TAG_END);
 
         pNewScreen->_pBfr = simpleBufferCreate(0,
-                                               TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR,
+                                               TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR |BMF_INTERLEAVED,
                                                TAG_SIMPLEBUFFER_VPORT, pNewScreen->_pVp,
                                                TAG_SIMPLEBUFFER_IS_DBLBUF, 1,
                                                TAG_SIMPLEBUFFER_USE_X_SCROLLING, 0,
