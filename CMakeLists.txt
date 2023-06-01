@@ -4,8 +4,6 @@ project(Smite LANGUAGES ASM C)
 set(CMAKE_C_STANDARD 17)
 file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 
-
-
 if(ELF2HUNK)
 	set(SMITE_EXECUTABLE smite.elf)
 	set(SMITE_OUTPUT_EXECUTABLE smite.exe)
@@ -27,6 +25,8 @@ else()
 	
 	add_executable(${SMITE_EXECUTABLE} ${SOURCES})
 endif()
+
+
 
 #if(AMIGA)
 add_subdirectory(deps/ace ace)

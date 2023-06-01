@@ -11,7 +11,7 @@
 #include <ace/managers/ptplayer.h>
 #include <ace/managers/mouse.h>
 #include "screen.h"
-
+#include "mouse_pointer.h"
 static void titleGsCreate(void) 
 {
 
@@ -37,7 +37,13 @@ static void titleGsCreate(void)
   bitmapDestroy(pLogo);
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);
+  mouse_pointer_create("data/pointers.bm");
+
 	
+}
+static void fadeCompleteTitle()
+{
+  stateChange(g_pStateMachineGame, &g_sStateGame);
 }
 
 static void titleGsLoop(void)
@@ -46,11 +52,9 @@ static void titleGsLoop(void)
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
 		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE) || mouseUse(MOUSE_PORT_1, MOUSE_LMB) || mouseUse(MOUSE_PORT_1, MOUSE_RMB))
     {
-       //gameExit();
-       stateChange(g_pStateMachineGame, &g_sStateGame);
-      //  statePush(g_pStateMachineGame, &g_sStateTitle);
+    	ScreenFadeToBlack(NULL, 7, fadeCompleteTitle);
     }
-
+mouse_pointer_update();
   ScreenUpdate();
 	
 }
@@ -58,7 +62,7 @@ static void titleGsLoop(void)
 static void titleGsDestroy(void)
 {
     // unload stuff here
-    ScreenFadeToBlack(NULL, 7, 0);
+    
 }
 
 

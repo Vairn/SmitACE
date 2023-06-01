@@ -42,7 +42,7 @@ systemUse();
 
 static void logoGsCreate(void) 
 {
-  //systemUse();
+  systemUse();
   logBlockBegin("logoGsCreate()");
   tScreen* pScreen = ScreenGetActive();
   paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 255);
@@ -62,6 +62,18 @@ static void logoGsCreate(void)
   bitmapDestroy(pLogo);
   systemUnuse();
 }
+
+static void fadeCompleteLogo(void)
+{
+  stateChange(g_pStateMachineGame, &g_sStateIntro);
+}
+
+static void fadeCompleteIntro(void)
+{
+  stateChange(g_pStateMachineGame, &g_sStateTitle);
+}
+
+
 static void introGsLoop(void)
 {
     if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
@@ -70,10 +82,12 @@ static void introGsLoop(void)
     {
       if(g_pStateMachineGame->pCurrent == &g_sStateLogo)
       {
-        stateChange(g_pStateMachineGame, &g_sStateIntro);
+        ScreenFadeToBlack(NULL, 7, fadeCompleteLogo);
+        //stateChange(g_pStateMachineGame, &g_sStateIntro);
       }
       else{
-        stateChange(g_pStateMachineGame, &g_sStateTitle);
+        ScreenFadeToBlack(NULL, 7, fadeCompleteIntro);
+        //stateChange(g_pStateMachineGame, &g_sStateTitle);
       }
        
       //  statePush(g_pStateMachineGame, &g_sStateTitle);
@@ -84,7 +98,6 @@ static void introGsLoop(void)
 
 static void introGsDestroy(void)
 {
-  ScreenFadeToBlack(NULL, 7, 0);
     // unload stuff here
 }
 
