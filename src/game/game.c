@@ -124,11 +124,10 @@ static void gameGsCreate(void)
     
      for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
      {
-        //  blitCopyAligned(
-        //      atlas, idx * 16, 0,
-        //      temp, 0, idx * 16,
-        //      16, 16);
-        blitRect(temp, 0, idx*16, 16, 16, 3*idx);
+         blitCopyAligned(
+             atlas, idx * 16, 0,
+             temp, 0, idx * 16,
+             16, 16);
      }
    
     tBitMap* mask = bitmapCreate(
@@ -184,9 +183,9 @@ static void gameGsLoop(void)
         //  blitWait();
         if (g_ubRedrawRequire)
         {
-              blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
-            drawView(g_pGameState, pScreen->_pBfr->pBack);
-            g_ubRedrawRequire --;
+             blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
+           drawView(g_pGameState, pScreen->_pBfr->pBack);
+           g_ubRedrawRequire --;
         }
         // g_pGameState->m_pCurrentParty->_PartyFacing++;
         // g_pGameState->m_pCurrentParty->_PartyFacing%=4;
@@ -238,7 +237,7 @@ static void gameGsLoop(void)
         // blitWait();
     }
 
-    blitCopy(temp, 0,0, pScreen->_pBfr->pBack, 0, 0, 16, MOUSE_MAX_COUNT*16, MINTERM_COOKIE);
+    //blitCopy(temp, 0,0, pScreen->_pBfr->pBack, 0, 0, 16, MOUSE_MAX_COUNT*16, MINTERM_COOKIE);
     static UWORD bobX=0;
     static UWORD bobY=0;
     bobX++;
