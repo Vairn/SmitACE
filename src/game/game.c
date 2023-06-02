@@ -106,39 +106,40 @@ static void gameGsCreate(void)
     drawView(g_pGameState, pScreen->_pBfr->pBack);
     blitCopy(pBackground, 0, 0, pScreen->_pBfr->pFront, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
     drawView(g_pGameState, pScreen->_pBfr->pFront);
-
+    mouse_pointer_create("data/pointers.bm");
     systemUnuse();
 
     // viewUpdateCLUT(pScreen->_pView);
     ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
 
-    bobManagerCreate(pScreen->_pBfr->pFront, pScreen->_pBfr->pBack, pScreen->_pBfr->uBfrBounds.uwY);
+   // bobManagerCreate(pScreen->_pBfr->pFront, pScreen->_pBfr->pBack, pScreen->_pBfr->uBfrBounds.uwY);
      
-    systemUse();
-    tBitMap *atlas = bitmapCreateFromFile("data/pointers.bm", 0);
+    // systemUse();
+    // tBitMap *atlas = bitmapCreateFromFile("data/pointers.bm", 0);
     
-    temp = bitmapCreate(
-        16, 16*MOUSE_MAX_COUNT ,
-        8, BMF_INTERLEAVED|BMF_CLEAR);
+    // temp = bitmapCreate(
+    //     16, 16*MOUSE_MAX_COUNT ,
+    //     8, BMF_INTERLEAVED|BMF_CLEAR);
     
-     for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
-     {
-         blitCopyAligned(
-             atlas, idx * 16, 0,
-             temp, 0, idx * 16,
-             16, 16);
-     }
+    //  for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
+    //  {
+    //      blitCopyAligned(
+    //          atlas, idx * 16, 0,
+    //          temp, 0, idx * 16,
+    //          16, 16);
+    //  }
    
-    tBitMap* mask = bitmapCreate(
-        16, 16,
-        8, BMF_INTERLEAVED);
-    blitRect(mask, 0, 0, 16, 16, 255);
-    bitmapDestroy(atlas);
-    bobInit(&g_pBob, 16,16, 1, bobCalcFrameAddress(temp, 0), bobCalcFrameAddress(mask, 0), 0,0);
+    // tBitMap* mask = bitmapCreate(
+    //     16, 16,
+    //     8, BMF_INTERLEAVED);
+    // blitRect(mask, 0, 0, 16, 16, 255);
+    // bitmapDestroy(atlas);
+    // bobInit(&g_pBob, 16,16, 1, bobCalcFrameAddress(temp, 0), bobCalcFrameAddress(mask, 0), 0,0);
     
-    bobReallocateBgBuffers();
-     systemUnuse();    
+    // bobReallocateBgBuffers();
+    
+    //  systemUnuse();    
    
 }
 
@@ -157,7 +158,7 @@ static void gameGsLoop(void)
         {
             current_pointer_gfx = MOUSE_TEST;
         }
-        spriteSetOddColourPaletteBank(current_pointer_gfx);
+        //spriteSetOddColourPaletteBank(current_pointer_gfx);
         mouse_pointer_switch(current_pointer_gfx);
     }
     if (g_ubGameActive)
@@ -249,11 +250,11 @@ static void gameGsLoop(void)
         bobY=0;
     g_pBob.sPos.uwX = bobX;
     g_pBob.sPos.uwY = bobY;
-    bobBegin(pScreen->_pBfr->pBack);
-    bobPush(&g_pBob);
-   // bobProcessNext();
-    bobPushingDone();
-    bobEnd();
+//     bobBegin(pScreen->_pBfr->pBack);
+//     bobPush(&g_pBob);
+//    // bobProcessNext();
+//     bobPushingDone();
+//     bobEnd();
     ScreenUpdate();
 }
 

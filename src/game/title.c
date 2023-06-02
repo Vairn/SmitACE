@@ -152,10 +152,6 @@ static void titleGsCreate(void)
 	RegionId loadGameRegionId = layerAddRegion(s_menuLayer, &loadGameButton);
 	RegionId exitGameRegionId = layerAddRegion(s_menuLayer, &exitGameButton);
 
-	const Region *pNewGameRegion = layerGetRegion(s_menuLayer, newGameRegionId);
-	const Region *pLoadGameRegion = layerGetRegion(s_menuLayer, loadGameRegionId);
-	const Region *pExitGameRegion = layerGetRegion(s_menuLayer, exitGameRegionId);
-
 	blitCopy(g_pMenuItems, 0, 0, g_pMainScreen->_pBfr->pBack, 223, 60, BUTTON_WIDTH, BUTTON_HEIGHT, MINTERM_COOKIE);
 	blitCopy(g_pMenuItems, 0, 24, g_pMainScreen->_pBfr->pBack, 223, 93, BUTTON_WIDTH, BUTTON_HEIGHT, MINTERM_COOKIE);
 	blitCopy(g_pMenuItems, 0, 48, g_pMainScreen->_pBfr->pBack, 223, 125, BUTTON_WIDTH, BUTTON_HEIGHT, MINTERM_COOKIE);
@@ -181,7 +177,7 @@ static void titleGsDestroy(void)
 {
 	bitmapDestroy(g_pMenuItems);
 	layerDestroy(s_menuLayer);
-	
+	mouse_pointer_destroy();
 	// unload stuff here
 }
 
