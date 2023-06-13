@@ -1,4 +1,6 @@
+[![MIT][license-shield]][license-text]
 # SmitACE
+
 Smite Ported To C
 Using A Custom AGA branch of [ACE](https://github.com/Vairn/ACE/tree/AGA)
 
