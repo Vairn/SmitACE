@@ -50,6 +50,8 @@ typedef struct _maze
     
 } tMaze;
 
+tMaze* mazeCreateDemoData(void);
+
 tMaze* mazeCreate(UBYTE width, UBYTE height);
 
 tMaze* mazeLoad(const char* filename);

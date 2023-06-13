@@ -85,7 +85,7 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
     }
 
     UWORD nazeOffset = (y)*pMaze->_width + (x);
-    if (pMaze->_mazeData[nazeOffset] == 0)
+    if (pMaze->_mazeData[nazeOffset] != 1)
     {
         pParty->_PartyX =x;
         pParty->_PartyY =y;

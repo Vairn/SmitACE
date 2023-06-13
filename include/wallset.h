@@ -24,6 +24,7 @@ typedef struct _wallGfx
     UWORD _width;
     UWORD _height;
     UBYTE _type;
+    UBYTE _setIndex;
     
 
 } tWallGfx;
@@ -35,8 +36,8 @@ typedef struct _wallset
     UBYTE _paletteSize;
     UBYTE* _palette;
     tWallGfx** _tileset;
-    tBitMap* _gfx;
-    tBitMap* _mask;
+    tBitMap** _gfx;
+    tBitMap** _mask;
 
 } tWallset;
 

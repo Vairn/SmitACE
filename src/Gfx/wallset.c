@@ -3,6 +3,34 @@
 #include <ace/managers/memory.h>
 #include <ace/utils/bitmap.h>
 
+char* addPostfixToFile(char* filename, const char* postfix, int number) {
+    //char new_filename[100];
+     char* new_filename = memAllocFast(strlen(filename) + strlen(postfix) + 5);
+       
+    char number_str[20];
+    char* dot = strchr(filename, '.');
+
+    if (dot != NULL) {
+        size_t index = dot - filename;
+        strncpy(new_filename, filename, index);
+        new_filename[index] = '\0';
+
+        sprintf(number_str, "%d", number); // Convert number to string
+        strcat(new_filename, postfix);
+        strcat(new_filename, number_str);
+        strcat(new_filename, dot);
+    } else {
+        strcpy(new_filename, filename);
+
+        sprintf(number_str, "%d", number); // Convert number to string
+        strcat(new_filename, postfix);
+        strcat(new_filename, number_str);
+    }
+
+    return new_filename;
+}
+
+
 char* replace_extension(const char* filename, const char* new_extension) {
     const char* dot_position = strrchr(filename, '.');
     if (dot_position == NULL) {
@@ -65,6 +93,7 @@ tWallset *wallsetLoad(const char *fileName)
         fileRead(pFile, &tilesetCount, 1);
 
         tileset = (tWallGfx **)memAllocFastClear(sizeof(tWallGfx *) * totalTilesetCount);
+
         // for (int i = 0; i < totalTilesetCount; i++)
         int i = 0;
         for (int ts = 0; ts < tilesetCount; ts++)
@@ -80,9 +109,11 @@ tWallset *wallsetLoad(const char *fileName)
                 UWORD x=0;
                 UWORD y=0;
                 UBYTE type = 0;
+                UBYTE setIndex = 0;
                 tBitMap *gfx = 0;
                 tBitMap *mask = 0;
                 fileRead(pFile, &type, 1);
+                fileRead(pFile, &setIndex,1);
                 fileRead(pFile, location, 2);
                 fileRead(pFile, screen, 4);
                 fileRead(pFile, &x, 2);
@@ -91,57 +122,7 @@ tWallset *wallsetLoad(const char *fileName)
                 fileRead(pFile, &width, 2);
                 fileRead(pFile, &height, 2);
 
-                /*UBYTE depth;
-                UWORD rowWordSize;
-                UWORD heightInBytes;
-                fileRead(pFile, &depth, 1);
-                fileRead(pFile, &rowWordSize, 2);
-                fileRead(pFile, &heightInBytes, 2);
-                // WinUAE debug overlay test
-                debug_clear();
-                //char* debugText = "This is a WinUAE debug overlay";
-                debug_filled_rect(100, 200 * 2, (400/totalTilesetCount)*i, 220 * 2, 0x0000ff00); // 0x00RRGGBB
-                //debug_rect(90, 190 * 2, 400, 220 * 2, 0x000000ff);         // 0x00RRGGBB    
-                
-                UWORD uwSrcWidth = rowWordSize * 16;
-                gfx = bitmapCreate(uwSrcWidth, height, depth, BMF_INTERLEAVED | BMF_CLEAR);
-                // auto bitmapMem = memAllocChipClear(rowWordSize * heightInBytes * depth);
-                // bitmapLoadFromMem(gfx, bitmapMem, 0, 0);
-                // ULONG ulCurByte = 0;
-                UWORD uwWidth = bitmapGetByteWidth(gfx);
-                auto s = (((uwSrcWidth) + 7) >> 3);
-                for (UWORD y = 0; y != heightInBytes; ++y)
-                {
-                    UWORD yb = ((y)*gfx->Depth);
-                    for (UBYTE ubPlane = 0; ubPlane != gfx->Depth; ++ubPlane)
-                    {
-
-                        // memcpy(&pBitMap->Planes[0][rowWordSize*((( y)*pBitMap->Depth)+ubPlane)+(0)],&pData[ulCurByte],((uwSrcWidth+7)>>3));
-                        ULONG p = uwWidth * (yb + ubPlane);
-                
-                        fileRead(pFile, &gfx->Planes[0][p], (s));
-                        // ulCurByte+=((rowWordSize+7)>>3);
-                    }
-                }
-
-                s = (((rowWordSize * 16) + 7) >> 3);
-                mask = bitmapCreate(uwSrcWidth, height, depth, BMF_INTERLEAVED | BMF_CLEAR);
-                uwWidth = bitmapGetByteWidth(mask);
-                for (UWORD y = 0; y != heightInBytes; ++y)
-                {
-                    UWORD yb = ((y)*mask->Depth);
-                    for (UBYTE ubPlane = 0; ubPlane != mask->Depth; ++ubPlane)
-                    {
-
-                        ULONG p = uwWidth * (yb + ubPlane);
-                        
-
-                        fileRead(pFile, &mask->Planes[0][p], (s));
-                        // fileRead(pFile, &mask->Planes[0][uwWidth * (((y)*mask->Depth) + ubPlane) + (0)], ((uwWidth + 7) >> 3));
-                    }
-                }
-                // FreeMem(bitmapMem, rowWordSize * heightInBytes * depth);
-                */
+               
                 tileset[i] = (tWallGfx *)memAllocFastClear(sizeof(tWallGfx));
                 tileset[i]->_location[0] = location[0];
                 tileset[i]->_location[1] = location[1];
@@ -152,6 +133,8 @@ tWallset *wallsetLoad(const char *fileName)
                 tileset[i]->_width = width;
                 tileset[i]->_height = height;
                 tileset[i]->_type = type;
+                tileset[i]->_setIndex=setIndex;
+                
                 i++;
             }
             // tileset[i]->_gfx = gfx;
@@ -162,13 +145,33 @@ tWallset *wallsetLoad(const char *fileName)
         pWallset->_palette = palette;
         pWallset->_tilesetCount = totalTilesetCount;
         pWallset->_tileset = tileset;
-        char* bitmapFile = replace_extension(fileName, ".pln");
-        pWallset->_gfx = bitmapCreateFromFile(bitmapFile,0);
-        char* maskFile = replace_extension(fileName, ".msk");
-        pWallset->_mask = bitmapCreateFromFile(maskFile,0);
+        pWallset->_gfx = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
+        pWallset->_mask = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
+        for (int ts=0; ts<tilesetCount; ts++)
+        {
+            char* bitmapFile = replace_extension(fileName, ".pln");
+            bitmapFile = addPostfixToFile(bitmapFile, "_", ts);
+            pWallset->_gfx[ts] = bitmapCreateFromFile(bitmapFile,0);
+            char* maskFile = replace_extension(fileName, ".msk");
+            maskFile = addPostfixToFile(maskFile, "_", ts);
+            pWallset->_mask[ts] = bitmapCreateFromFile(maskFile,0);
+        /*    if (pWallset->_gfx[ts]==0)
+            {
+                pWallset->_gfx[ts] = bitmapCreate(20,20,1,BMF_CLEAR);
+            }
+            if (pWallset->_mask[ts]==0)
+            {
+                pWallset->_mask[ts] = bitmapCreate(20,20,1,BMF_CLEAR);
+            }*/
+            memFree(bitmapFile,strlen(bitmapFile)+1);
+            memFree(maskFile,strlen(maskFile)+1);
+       
+        }
+        // char* bitmapFile = replace_extension(fwwileName, ".pln");
+        // pWallset->_gfx = bitmapCreateFromFile(bitmapFile,0);
+        // char* maskFile = replace_extension(fileName, ".msk");
+        // pWallset->_mask = bitmapCreateFromFile(maskFile,0);
 
-        memFree(bitmapFile,strlen(bitmapFile)+1);
-        memFree(maskFile,strlen(maskFile)+1);
         return pWallset;
     }
     return 0;

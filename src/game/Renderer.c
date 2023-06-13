@@ -6,6 +6,7 @@
 
 CMazePos g_mazePos[18];
 CMazeDr g_mazeDr[4];
+tBitMap *g_pMazeBitmap = NULL;
 
 void clearViews(UBYTE *currentView, int startIndex, int endIndex)
 {
@@ -71,20 +72,83 @@ int drel(int d1, int d2)
     return lookupTable[d2][d1];
 }
 
+void cleanUpView(UBYTE *pCurrentView)
+{
+
+    if (pCurrentView[14] && 0x01)
+    {
+        pCurrentView[11] = 0;
+        pCurrentView[6] = 0;
+    }
+    if (pCurrentView[13])
+    {
+        pCurrentView[9] = 0;
+        pCurrentView[4] = 0;
+        pCurrentView[3] = 0;
+    }
+    if (pCurrentView[12])
+    {
+        pCurrentView[7] = 0;
+        pCurrentView[1] = 0;
+        pCurrentView[0] = 0;
+    }
+
+    if (pCurrentView[11])
+    {
+        pCurrentView[6] = 0;
+    }
+    if (pCurrentView[10])
+    {
+        pCurrentView[9] = 0;
+        pCurrentView[3] = 0;
+    }
+    if (pCurrentView[9])
+    {
+
+        pCurrentView[4] = 0;
+        pCurrentView[3] = 0;
+    }
+
+    if (pCurrentView[8])
+    {
+        pCurrentView[7] = 0;
+        // pCurrentView[2] =0;
+        // pCurrentView[1] =0;
+        pCurrentView[0] = 0;
+    }
+
+    if (pCurrentView[7])
+    {
+        pCurrentView[1] = 0;
+        pCurrentView[0] = 0;
+    }
+}
 void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
 {
-    static UBYTE currentView[18];
-    // memset(currentView, 0, sizeof(currentView));
-    UBYTE px, py;
-    static tWallGfx *render[40];
-    // memset(render, 0, sizeof(render));
 
+    static UBYTE currentView[18];
+    memset(currentView, 0, sizeof(currentView));
+    UBYTE px, py;
+   // static tWallGfx *render[100];
+   // memset(render, 0, sizeof(render));
+    blitRect(pCurrentBuffer, SOFFX, SOFFX, 240, 180, 0);
     px = pGameState->m_pCurrentParty->_PartyX;
     py = pGameState->m_pCurrentParty->_PartyY;
     UBYTE facing = pGameState->m_pCurrentParty->_PartyFacing;
     tMaze *pMaze = pGameState->m_pCurrentMaze;
     tWallset *pWallset = pGameState->m_pCurrentWallset;
-
+    if (g_pMazeBitmap == NULL)
+    {
+        g_pMazeBitmap = bitmapCreate(pMaze->_width * 5, pMaze->_height * 5, 3, BMF_CLEAR);
+        for (int y = 0; y < pMaze->_height; y++)
+        {
+            for (int x = 0; x < pMaze->_width; x++)
+            {
+                UWORD mazeOffset = y * pMaze->_width + x;
+                blitRect(g_pMazeBitmap, x * 5, y * 5, 5, 5, pMaze->_mazeData[mazeOffset]);
+            }
+        }
+    }
     for (int i = 0; i < 17; ++i)
     {
         BYTE x = 0;
@@ -99,103 +163,62 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
             x = g_mazeDr[facing].xs * g_mazePos[i].yDelta;
             y = g_mazeDr[facing].ys * g_mazePos[i].xDelta;
         }
+        if ((px + x) < 0 || (py + y) < 0)
+        {
+            continue;
+        }
+        if ((px + x) > pMaze->_width || (py + y) > pMaze->_height)
+        {
+            continue;
+        }
 
-        UWORD nazeOffset = (py + y) * pMaze->_width + (px + x);
-        UBYTE wmi = pMaze->_mazeData[nazeOffset];
+        UWORD mazeOffset = (py + y) * pMaze->_width + (px + x);
+        UBYTE wmi = pMaze->_mazeData[mazeOffset];
         currentView[i] = wmi;
     }
-
-    if (currentView[14] > 0)
-    {
-        if (currentView[15] > 0)
-        {
-            if (currentView[16] > 0)
-            {
-                clearViews(currentView, 0, 13);
-            }
-        }
-    }
-
-    if (currentView[12] > 0)
-    {
-        if (currentView[13] > 0)
-        {
-            if (currentView[14] > 0)
-            {
-                clearViews(currentView, 0, 11);
-            }
-        }
-    }
-
-    if (currentView[8] > 0)
-    {
-        if (currentView[10] > 0)
-        {
-            if (currentView[11] > 0)
-            {
-                clearViews(currentView, 0, 7);
-                currentView[9] = 0;
-            }
-        }
-    }
-
-    if (currentView[14] > 0)
-    {
-        currentView[11] = 0;
-        currentView[6] = 0;
-    }
-    if (currentView[15] > 0)
-    {
-        currentView[0] = 0;
-        currentView[1] = 0;
-        currentView[7] = 0;
-    }
-    if (currentView[16] > 0)
-    {
-        currentView[3] = 0;
-        currentView[4] = 0;
-        currentView[9] = 0;
-    }
-    if (currentView[11] > 0)
-    {
-        currentView[6] = 0;
-    }
-
+    blitCopy(g_pMazeBitmap, ((px - 6) * 5), 1+((py - 3) * 5), pCurrentBuffer, 182, 194, 60, 32, MINTERM_COOKIE);
+    // blitRect(pCurrentBuffer, 250, 20, 7*8, 8*8,0);
+    // for (int i=0; i<17; i++)
+    // {
+    //     //if (currentView[i] == 1)
+    //     //{
+    //         blitRect(pCurrentBuffer,
+    //         278+(g_mazePos[i].xDelta*8),
+    //         46+(g_mazePos[i].yDelta*8), 8, 8, currentView[i]);
+    //     //}
+    // }
+    cleanUpView(currentView);
+    //  for (int i=0; i<17; i++)
+    //     {
+    //         //if (currentView[i] == 1)
+    //         //{
+    //             blitRect(pCurrentBuffer,
+    //             278+(g_mazePos[i].xDelta*8),
+    //             86+(g_mazePos[i].yDelta*8), 8, 8, currentView[i]);
+    //         //}
+    //     }
     // draw the view
-    //5int j = 0;
+    // 5int j = 0;
     UBYTE j = 0;
-    for (UBYTE i = 0; i < 17; i++)
+    for (UBYTE i = 0; i < 18; i++)
     {
-        if (currentView[i])
+        BYTE tx = g_mazePos[i].xDelta;
+        BYTE ty = g_mazePos[i].yDelta;
+        // for (UBYTE w = 52; w < 90; ++w)
+        for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
         {
-            BYTE tx = g_mazePos[i].xDelta;
-            BYTE ty = g_mazePos[i].yDelta;
-            for (UBYTE w = 52; w < 90; ++w)
+            if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if (tx == -pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
-                {
-                    render[j++] = pWallset->_tileset[w];
-                    //break;
-                }
+                if (currentView[i] == pWallset->_tileset[w]->_type)
+                 blitCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
+                     pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y,
+                     pCurrentBuffer,
+                     pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX,
+                     pWallset->_tileset[w]->_width, pWallset->_tileset[w]->_height,
+                     (UWORD *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
+                   // render[j++] = pWallset->_tileset[w];
+                // break;
             }
         }
-    }
-
-    for (UBYTE w = 0; w < j; w++)
-    {
-        tWallGfx *currentTile = render[w];
-        blitCopyMask(pWallset->_gfx,
-                     currentTile->_x, currentTile->_y,
-                     pCurrentBuffer,
-                     currentTile->_screen[0] + SOFFX, currentTile->_screen[1] + SOFFX,
-                     currentTile->_width, currentTile->_height,
-                     (UWORD *)pWallset->_mask->Planes[0]);
-        blitWait();
-        // blitCopy(pWallset->_gfx,
-        //              currentTile->_x, currentTile->_y,
-        //              pCurrentBuffer,
-        //              currentTile->_screen[0] + SOFFX, currentTile->_screen[1] + SOFFX,
-        //              currentTile->_width, currentTile->_height,
-        //              MINTERM_COOKIE);
     }
 }
