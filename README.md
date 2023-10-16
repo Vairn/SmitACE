@@ -1,4 +1,6 @@
+[![MIT][license-shield]][license-text]
 # SmitACE
+
 Smite Ported To C
 Using A Custom AGA branch of [ACE](https://github.com/Vairn/ACE/tree/AGA)
 
@@ -14,3 +16,5 @@ Following the Instructions to setup [ACE](https://github.com/AmigaPorts/ACE) to 
 
 It will make a build folder, copy the data folder across to it.
 
+[license-text]: https://opensource.org/license/mit/
+[license-shield]: https://img.shields.io/badge/license-MIT-brightgreen
