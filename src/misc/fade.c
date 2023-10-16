@@ -96,7 +96,7 @@ tFadeState fadeProcess(tFade *pFade)
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
 		}
-		viewUpdateCLUT(pFade->pView);
+		viewUpdatePalette(pFade->pView);
 
 		UBYTE ubVolume = (64 * ubCnt) / pFade->ubCntEnd;
 		ptplayerSetMasterVolume(ubVolume);

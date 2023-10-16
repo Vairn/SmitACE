@@ -11,6 +11,7 @@
 #include "screen.h"
 #include "Renderer.h"
 #include "mouse_pointer.h"
+#include "maze.h"
 
 ULONG seed = 1;
 #define SOFFX 5
@@ -103,8 +104,6 @@ static void gameGsLoop(void)
     }
     if (g_ubGameActive)
     {
-        
-        static int i = 0;
         
         if (g_ubRedrawRequire)
         {

@@ -19,7 +19,7 @@ void genericCreate(void) {
 	keyCreate();
     mouseCreate(MOUSE_PORT_1);
 	ptplayerCreate(1);
-	stateChange(g_pStateMachineGame, &g_sStateTitle);
+	stateChange(g_pStateMachineGame, &g_sStateLogo);
 	systemUnuse();
 	//AllocateCommandList();
 }
