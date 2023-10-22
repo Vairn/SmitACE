@@ -61,6 +61,11 @@ static void gameGsCreate(void)
     blitRect(pBackground, 0, 0, 240, 180, 0);
 
     paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
+    for(int p=0; p<256; p++)
+    {
+        ULONG* pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
+        pPalRef[p] = pWallset->_palette[3*p] << 16 | pWallset->_palette[(3*p)+1] << 8 | pWallset->_palette[(3*p+2)];
+    }
     pMod = ptplayerModCreate("data/suspense.mod");
     ptplayerLoadMod(pMod, NULL, 0);
     ptplayerSetMasterVolume(64);
