@@ -37,6 +37,7 @@ tScreen *CreateNewScreen(BYTE palCount)
         return pNewScreen;
     }
 
+    timerCreate();
     return 0;
 }
 void ScreenMakeActive(tScreen *pScreen)
@@ -81,6 +82,7 @@ void ScreenUpdate(void)
     copProcessBlocks();
     // systemIdleBegin();
     vPortWaitUntilEnd(g_pCurrentScreen->_pVp);
+    timerProcess();
     //	systemIdleEnd();
 }
 

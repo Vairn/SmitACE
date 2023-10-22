@@ -38,6 +38,7 @@ systemUse();
 	systemUnuse();
   ScreenFadeFromBlack(NULL, 7, 0);
   bitmapDestroy(pLogo);
+  timerCreate();
 }
 
 static void logoGsCreate(void) 
@@ -61,6 +62,7 @@ static void logoGsCreate(void)
   ScreenFadeFromBlack(NULL, 7, 0); // 7 is the speed of the fade
   bitmapDestroy(pLogo);
   systemUnuse();
+  timerCreate();
 }
 
 static void fadeCompleteLogo(void)
@@ -78,7 +80,7 @@ static void introGsLoop(void)
 {
     if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
-		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE) || mouseUse(MOUSE_PORT_1, MOUSE_LMB) || mouseUse(MOUSE_PORT_1, MOUSE_RMB))
+		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE) || mouseUse(MOUSE_PORT_1, MOUSE_LMB) || mouseUse(MOUSE_PORT_1, MOUSE_RMB) || timerGet() > 200)
     {
       if(g_pStateMachineGame->pCurrent == &g_sStateLogo)
       {
@@ -94,6 +96,7 @@ static void introGsLoop(void)
     }
 
     ScreenUpdate();
+    
 }
 
 static void introGsDestroy(void)
