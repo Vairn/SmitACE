@@ -75,7 +75,7 @@ int drel(int d1, int d2)
 void cleanUpView(UBYTE *pCurrentView)
 {
 
-    if (pCurrentView[14] && 0x01)
+    if (pCurrentView[14])
     {
         pCurrentView[11] = 0;
         pCurrentView[6] = 0;
@@ -209,15 +209,17 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if (currentView[i] == pWallset->_tileset[w]->_type)
-                 blitCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
+                if (currentView[i] == pWallset->_tileset[w]->_type )
+                 {
+                    blitCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
                      pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y,
                      pCurrentBuffer,
                      pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX,
                      pWallset->_tileset[w]->_width, pWallset->_tileset[w]->_height,
                      (UWORD *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
+                   }
                    // render[j++] = pWallset->_tileset[w];
-                // break;
+                 //break;
             }
         }
     }
