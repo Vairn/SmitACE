@@ -216,7 +216,7 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
                      pCurrentBuffer,
                      pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX,
                      pWallset->_tileset[w]->_width, pWallset->_tileset[w]->_height,
-                     (UWORD *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
+                     (UBYTE *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
                    }
                    // render[j++] = pWallset->_tileset[w];
                  //break;

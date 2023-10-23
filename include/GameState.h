@@ -30,3 +30,5 @@ void FreeGameState();
 
 UBYTE InitNewGame();
 UBYTE LoadLevel(BYTE level);
+
+UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction);
