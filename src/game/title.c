@@ -25,6 +25,11 @@ static Layer *s_menuLayer = NULL;
 static tBitMap *g_pMenuItems;
 static tScreen *g_pMainScreen;
 
+// Regions for Title Menu
+RegionId newGameRegionId;
+RegionId loadGameRegionId;
+RegionId exitGameRegionId;
+
 static void fadeCompleteTitle()
 {
 	stateChange(g_pStateMachineGame, &g_sStateGame);
@@ -148,9 +153,9 @@ static void titleGsCreate(void)
 		.cbOnReleased = cbOnReleased,
 		.context = (void *)QUIT_IDX};
 
-	RegionId newGameRegionId = layerAddRegion(s_menuLayer, &newGameButton);
-	RegionId loadGameRegionId = layerAddRegion(s_menuLayer, &loadGameButton);
-	RegionId exitGameRegionId = layerAddRegion(s_menuLayer, &exitGameButton);
+	newGameRegionId = layerAddRegion(s_menuLayer, &newGameButton);
+	loadGameRegionId = layerAddRegion(s_menuLayer, &loadGameButton);
+	exitGameRegionId = layerAddRegion(s_menuLayer, &exitGameButton);
 
 	blitCopy(g_pMenuItems, 0, 0, g_pMainScreen->_pBfr->pBack, 223, 60, BUTTON_WIDTH, BUTTON_HEIGHT, MINTERM_COOKIE);
 	blitCopy(g_pMenuItems, 0, 24, g_pMainScreen->_pBfr->pBack, 223, 93, BUTTON_WIDTH, BUTTON_HEIGHT, MINTERM_COOKIE);
@@ -176,6 +181,10 @@ static void titleGsLoop(void)
 static void titleGsDestroy(void)
 {
 	bitmapDestroy(g_pMenuItems);
+	layerRemoveRegion(s_menuLayer, newGameRegionId);
+	layerRemoveRegion(s_menuLayer, loadGameRegionId);
+	layerRemoveRegion(s_menuLayer, exitGameRegionId);
+	
 	layerDestroy(s_menuLayer);
 	mouse_pointer_destroy();
 	// unload stuff here
