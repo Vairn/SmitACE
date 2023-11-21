@@ -37,7 +37,12 @@
 		"wanderer.h": "c",
 		"rand.h": "c",
 		"misc.h": "c",
-		"smite.h": "c"
+		"smite.h": "c",
+		"interrupts.h": "c",
+		"types.h": "c",
+		"bob.h": "c",
+		"mouse_pointer.h": "c",
+		"maze.h": "c"
 	},
 	"cmake.configureOnOpen": false,
 	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"

@@ -12,7 +12,8 @@
 				"..",
 				"-DACE_DEBUG=ON",
 				"-DGAME_DEBUG=ON",
-				"-DGAME_DEBUG_AI=OFF"
+				"-DGAME_DEBUG_AI=OFF",
+				"-DACE_DEBUG_PTPLAYER=ON"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/build"
@@ -28,7 +29,8 @@
 				"..",
 				"-DACE_DEBUG=ON",
 				"-DGAME_DEBUG=ON",
-				"-DGAME_DEBUG_AI=ON"
+				"-DGAME_DEBUG_AI=ON",
+				"-DACE_DEBUG_PTPLAYER=ON"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/build"
@@ -44,7 +46,8 @@
 				"..",
 				"-DACE_DEBUG=OFF",
 				"-DGAME_DEBUG=OFF",
-				"-DGAME_DEBUG_AI=OFF"
+				"-DGAME_DEBUG_AI=OFF",
+				"-DACE_DEBUG_PTPLAYER=OFF"
 			],
 			"options": {
 				"cwd": "${workspaceFolder}/build"
