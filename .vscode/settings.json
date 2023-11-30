@@ -42,7 +42,10 @@
 		"types.h": "c",
 		"bob.h": "c",
 		"mouse_pointer.h": "c",
-		"maze.h": "c"
+		"maze.h": "c",
+		"title.h": "c",
+		"extview.h": "c",
+		"game_ui.h": "c"
 	},
 	"cmake.configureOnOpen": false,
 	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"
