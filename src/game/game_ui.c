@@ -51,6 +51,7 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegion cbOnPress
     // Screen
 
     // Misc
+    gameAddRegion(65,192,22,38, GAME_UI_GADGET_BATTERY, MOUSE_EXAMINE);
 
 
 

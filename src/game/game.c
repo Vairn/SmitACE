@@ -96,7 +96,11 @@ void cbGameOnUnhovered(Region *pRegion)
 
 void cbGameOnHovered(Region *pRegion)
 {
-
+    UBYTE id = ((UBYTE)(ULONG)pRegion->context);
+    if (id == GAME_UI_GADGET_BATTERY)
+    {
+        //7gameExit();
+    }
 }
 
 
