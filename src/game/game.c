@@ -13,6 +13,8 @@
 #include "mouse_pointer.h"
 #include "maze.h"
 
+#include "game_ui.h"
+#include "game_ui_regions.h"
 ULONG seed = 1;
 #define SOFFX 5
 
@@ -39,6 +41,99 @@ UBYTE g_ubGameActive = 0;
 UBYTE g_ubRedrawRequire =0;
 tBob g_pBob;
 tBitMap *temp = NULL;
+
+void TurnRight()
+{
+    g_pGameState->m_pCurrentParty->_PartyFacing++;
+    g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
+    g_ubRedrawRequire = 2;
+}
+
+void TurnLeft()
+{
+    g_pGameState->m_pCurrentParty->_PartyFacing--;
+    g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
+    g_ubRedrawRequire = 2;
+}
+
+void MoveRight()
+{
+    UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 1;
+    modFace %= 4;
+    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    g_ubRedrawRequire = 2;
+}
+
+void MoveLeft()
+{
+    UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 3;
+    modFace %= 4;
+    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    g_ubRedrawRequire = 2;
+}
+
+void MoveBackwards()
+{
+    UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
+    modFace %= 4;
+    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    g_ubRedrawRequire = 2;
+}
+
+void MoveForwards()
+{
+    UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing;
+    modFace %= 4;
+    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    g_ubRedrawRequire = 2;
+}
+
+
+void cbGameOnUnhovered(Region *pRegion)
+{
+
+}
+
+void cbGameOnHovered(Region *pRegion)
+{
+
+}
+
+
+void cbGameOnPressed(Region *pRegion)
+{
+    UBYTE id = ((UBYTE)(ULONG)pRegion->context);
+    switch (id)
+    {
+    case GAME_UI_GADGET_FORWARD:
+        MoveForwards();
+        break;
+    case GAME_UI_GADGET_BACKWARD:
+        MoveBackwards();
+        break;
+    case GAME_UI_GADGET_LEFT:
+        MoveLeft();
+        break;
+    case GAME_UI_GADGET_RIGHT:
+        MoveRight();
+        break;
+    case GAME_UI_GADGET_TURN_LEFT:
+        TurnLeft();
+        break;
+    case GAME_UI_GADGET_TURN_RIGHT:
+        TurnRight();
+        break;
+        default:
+        break;
+    }
+
+}
+
+void cbGameOnReleased(Region *pRegion)
+{
+
+}
+
 static void fadeInComplete(void)
 {
     g_ubGameActive = 1;
@@ -84,6 +179,8 @@ static void gameGsCreate(void)
     mouse_pointer_create("data/pointers.bm");
     systemUnuse();
 
+    gameUIInit(cbGameOnHovered, cbGameOnUnhovered, cbGameOnPressed, cbGameOnReleased);
+
     // viewUpdateCLUT(pScreen->_pView);
     ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
@@ -96,7 +193,7 @@ static void gameGsLoop(void)
 
     // Added to Test the mouse pointer code.
     // And sprite bitmap switching for AGA - VAIRN.
-    
+    gameUIUpdate();
     if(mouseUse(MOUSE_PORT_1, MOUSE_LMB))
     {
         current_pointer_gfx +=1;
@@ -121,44 +218,28 @@ static void gameGsLoop(void)
 
         if (keyCheck(KEY_W))
         {
-            UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing;
-            modFace %= 4;
-            mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-            g_ubRedrawRequire = 2;
+            MoveForwards();
         }
         if (keyCheck(KEY_S))
         {
-            UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
-            modFace %= 4;
-            mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-            g_ubRedrawRequire = 2;
+            MoveBackwards();
         }
         if (keyCheck(KEY_A))
         {
-            UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 3;
-            modFace %= 4;
-            mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-            g_ubRedrawRequire = 2;
+            MoveLeft();
         }
         if (keyCheck(KEY_D))
         {
-            UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 1;
-            modFace %= 4;
-            mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-            g_ubRedrawRequire = 2;
+            MoveRight();
         }
 
         if (keyCheck(KEY_Q))
         {
-            g_pGameState->m_pCurrentParty->_PartyFacing--;
-            g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
-            g_ubRedrawRequire = 2;
+            TurnLeft();
         }
         if (keyCheck(KEY_E))
         {
-            g_pGameState->m_pCurrentParty->_PartyFacing++;
-            g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
-            g_ubRedrawRequire = 2;
+            TurnRight();
         }
         
     }
@@ -166,8 +247,10 @@ static void gameGsLoop(void)
     ScreenUpdate();
 }
 
+
 static void gameGsDestroy(void)
 {
+    gameUIDestroy();
     ScreenFadeToBlack(NULL, 7, 0);
     bobManagerDestroy();
 }
