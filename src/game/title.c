@@ -73,7 +73,7 @@ void cbOnUnhovered(Region *pRegion)
 		MINTERM_COOKIE);
 }
 
-void cbOnPressed(Region *pRegion)
+void cbOnPressed(Region *pRegion, UBYTE left, UBYTE right)
 {
 	logWrite("Pressing %d", (UWORD)(ULONG)pRegion->context);
 	UBYTE id = ((UBYTE)(ULONG)pRegion->context);
@@ -92,7 +92,7 @@ void cbOnPressed(Region *pRegion)
 	}
 }
 
-void cbOnReleased(Region *pRegion)
+void cbOnReleased(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
 	logWrite("Releasing %d", (UWORD)(ULONG)pRegion->context);
 }

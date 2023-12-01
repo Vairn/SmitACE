@@ -26,7 +26,7 @@ RegionId gameAddRegion(UWORD uwX, UWORD uwY, UWORD uwWidth, UWORD uwHeight, UBYT
     return regionId;
 }
 
-void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegion cbOnPressed, cbRegion cbOnReleased)
+void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegionClick cbOnPressed, cbRegionClick cbOnReleased)
 {
     s_gameUILayer = layerCreate();
     s_cbOnHovered = cbOnHovered;
@@ -47,12 +47,27 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegion cbOnPress
     gameAddRegion(45,212,18,18,GAME_UI_GADGET_RIGHT, MOUSE_USE);
 
     // Inventory
+    gameAddRegion(252,145,30,28, GAME_UI_GADGET_INV_SLOT_1, MOUSE_USE);
+    gameAddRegion(285,145,30,28, GAME_UI_GADGET_INV_SLOT_2, MOUSE_USE);
+    gameAddRegion(252,176,30,28, GAME_UI_GADGET_INV_SLOT_3, MOUSE_USE);
+    gameAddRegion(285,176,30,28, GAME_UI_GADGET_INV_SLOT_4, MOUSE_USE);
+    gameAddRegion(252,208,30,28, GAME_UI_GADGET_INV_SLOT_5, MOUSE_USE);
+    gameAddRegion(285,208,30,28, GAME_UI_GADGET_INV_SLOT_6, MOUSE_USE);
 
+    gameAddRegion(252,8,30,28, GAME_UI_GADGET_EQUIPMENT_1, MOUSE_USE);
+    gameAddRegion(285,8,30,28, GAME_UI_GADGET_EQUIPMENT_2, MOUSE_USE);
+    gameAddRegion(252,92,30,28, GAME_UI_GADGET_EQUIPMENT_3, MOUSE_USE);
+    gameAddRegion(285,92,30,28, GAME_UI_GADGET_EQUIPMENT_4, MOUSE_USE);
+
+    gameAddRegion(252,131,63,12, GAME_UI_GADGET_INV_UP, MOUSE_USE);
+    gameAddRegion(252,240,63,12, GAME_UI_GADGET_INV_DOWN, MOUSE_USE);
+    
+    
     // Screen
 
     // Misc
     gameAddRegion(65,192,22,38, GAME_UI_GADGET_BATTERY, MOUSE_EXAMINE);
-
+    gameAddRegion(178,192,66,38, GAME_UI_GADGET_MAP, MOUSE_EXAMINE);
 
 
 	layerSetEnable(s_gameUILayer, 1);

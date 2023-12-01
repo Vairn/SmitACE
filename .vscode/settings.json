@@ -45,7 +45,8 @@
 		"maze.h": "c",
 		"title.h": "c",
 		"extview.h": "c",
-		"game_ui.h": "c"
+		"game_ui.h": "c",
+		"layer.h": "c"
 	},
 	"cmake.configureOnOpen": false,
 	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"

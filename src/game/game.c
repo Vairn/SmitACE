@@ -38,9 +38,29 @@ UWORD *g_pModSamples;
 tPtplayerMod *pMod;
 
 UBYTE g_ubGameActive = 0;
-UBYTE g_ubRedrawRequire =0;
+UBYTE g_ubRedrawRequire = 0;
 tBob g_pBob;
 tBitMap *temp = NULL;
+
+void handleEquipmentClicked(WORD slotID)
+{
+}
+
+void handleEquipmentUsed(WORD slotID)
+{
+}
+
+void handleInventoryClicked(WORD slotID)
+{
+}
+
+void handleInventoryScrolled(WORD direction, UBYTE page)
+{
+}
+
+void handleMapClicked(void)
+{
+}
 
 void TurnRight()
 {
@@ -88,10 +108,8 @@ void MoveForwards()
     g_ubRedrawRequire = 2;
 }
 
-
 void cbGameOnUnhovered(Region *pRegion)
 {
-
 }
 
 void cbGameOnHovered(Region *pRegion)
@@ -99,43 +117,72 @@ void cbGameOnHovered(Region *pRegion)
     UBYTE id = ((UBYTE)(ULONG)pRegion->context);
     if (id == GAME_UI_GADGET_BATTERY)
     {
-        //7gameExit();
+        // 7gameExit();
     }
 }
 
-
-void cbGameOnPressed(Region *pRegion)
+void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
     UBYTE id = ((UBYTE)(ULONG)pRegion->context);
     switch (id)
     {
     case GAME_UI_GADGET_FORWARD:
-        MoveForwards();
+        if (ubLeft)
+            MoveForwards();
         break;
     case GAME_UI_GADGET_BACKWARD:
-        MoveBackwards();
+        if (ubLeft)
+            MoveBackwards();
         break;
     case GAME_UI_GADGET_LEFT:
-        MoveLeft();
+        if (ubLeft)
+            MoveLeft();
         break;
     case GAME_UI_GADGET_RIGHT:
-        MoveRight();
+        if (ubLeft)
+            MoveRight();
         break;
     case GAME_UI_GADGET_TURN_LEFT:
-        TurnLeft();
+        if (ubLeft)
+            TurnLeft();
         break;
     case GAME_UI_GADGET_TURN_RIGHT:
-        TurnRight();
+        if (ubLeft)
+            TurnRight();
         break;
-        default:
+    case GAME_UI_GADGET_EQUIPMENT_1:
+    case GAME_UI_GADGET_EQUIPMENT_2:
+    case GAME_UI_GADGET_EQUIPMENT_3:
+    case GAME_UI_GADGET_EQUIPMENT_4:
+        if (ubLeft)
+            handleEquipmentClicked(id - GAME_UI_GADGET_EQUIPMENT_1);
+
+        if (ubRight)
+            handleEquipmentUsed(id - GAME_UI_GADGET_EQUIPMENT_1);
+        break;
+    case GAME_UI_GADGET_INV_SLOT_1:
+    case GAME_UI_GADGET_INV_SLOT_2:
+    case GAME_UI_GADGET_INV_SLOT_3:
+    case GAME_UI_GADGET_INV_SLOT_4:
+    case GAME_UI_GADGET_INV_SLOT_5:
+    case GAME_UI_GADGET_INV_SLOT_6:
+        if (ubLeft)
+            handleInventoryClicked(id - GAME_UI_GADGET_INV_SLOT_1);
+        break;
+    case GAME_UI_GADGET_INV_DOWN:
+    case GAME_UI_GADGET_INV_UP:
+            handleInventoryScrolled(id - GAME_UI_GADGET_INV_UP, ubRight);
+        break;
+    case GAME_UI_GADGET_MAP:
+        handleMapClicked();
+        break;
+    default:
         break;
     }
-
 }
 
-void cbGameOnReleased(Region *pRegion)
+void cbGameOnReleased(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
-
 }
 
 static void fadeInComplete(void)
@@ -160,10 +207,10 @@ static void gameGsCreate(void)
     blitRect(pBackground, 0, 0, 240, 180, 0);
 
     paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
-    for(int p=0; p<256; p++)
+    for (int p = 0; p < 256; p++)
     {
-        ULONG* pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
-        pPalRef[p] = pWallset->_palette[3*p] << 16 | pWallset->_palette[(3*p)+1] << 8 | pWallset->_palette[(3*p+2)];
+        ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
+        pPalRef[p] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
     }
     pMod = ptplayerModCreate("data/suspense.mod");
     ptplayerLoadMod(pMod, NULL, 0);
@@ -198,25 +245,25 @@ static void gameGsLoop(void)
     // Added to Test the mouse pointer code.
     // And sprite bitmap switching for AGA - VAIRN.
     gameUIUpdate();
-    if(mouseUse(MOUSE_PORT_1, MOUSE_LMB))
+    if (mouseUse(MOUSE_PORT_1, MOUSE_LMB))
     {
-        current_pointer_gfx +=1;
-        if(current_pointer_gfx == MOUSE_MAX_COUNT)
+        current_pointer_gfx += 1;
+        if (current_pointer_gfx == MOUSE_MAX_COUNT)
         {
             current_pointer_gfx = MOUSE_TEST;
         }
-        //spriteSetOddColourPaletteBank(current_pointer_gfx);
+        // spriteSetOddColourPaletteBank(current_pointer_gfx);
         mouse_pointer_switch(current_pointer_gfx);
     }
     if (g_ubGameActive)
     {
-        
+
         if (g_ubRedrawRequire)
         {
-           drawView(g_pGameState, pScreen->_pBfr->pBack);
-           g_ubRedrawRequire --;
+            drawView(g_pGameState, pScreen->_pBfr->pBack);
+            g_ubRedrawRequire--;
         }
-        
+
         if (keyCheck(KEY_ESCAPE))
             gameExit();
 
@@ -245,12 +292,10 @@ static void gameGsLoop(void)
         {
             TurnRight();
         }
-        
     }
 
     ScreenUpdate();
 }
-
 
 static void gameGsDestroy(void)
 {

@@ -7,6 +7,7 @@
 
 typedef struct _Region Region;
 typedef void (*cbRegion)(Region *self);
+typedef void (*cbRegionClick)(Region *self, UBYTE left, UBYTE right);
 typedef UWORD RegionId;
 typedef struct _Layer Layer;
 
@@ -19,8 +20,8 @@ typedef struct _Region
     cbRegion cbOnIdle;
     cbRegion cbOnHovered;
     cbRegion cbOnUnhovered;
-    cbRegion cbOnPressed;
-    cbRegion cbOnReleased;
+    cbRegionClick cbOnPressed;
+    cbRegionClick cbOnReleased;
     void *context;
 } Region;
 

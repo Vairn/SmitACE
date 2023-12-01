@@ -61,7 +61,9 @@ void layerUpdate(Layer* pLayer)
     }
 
     RegionInternal *pCurrent = pLayer->pFirstRegion;
-    UBYTE ubMousePressed = mouseCheck(MOUSE_PORT_1, MOUSE_LMB);
+    UBYTE ubMousePressedLeft = mouseCheck(MOUSE_PORT_1, MOUSE_LMB);
+    UBYTE ubMousePressedRight = mouseCheck(MOUSE_PORT_1, MOUSE_RMB);
+    UBYTE ubMousePressed = ubMousePressedLeft || ubMousePressedRight;
     mouse_pointer_t mousePointerId = MOUSE_POINTER;
     while (pCurrent)
     {
@@ -83,7 +85,7 @@ void layerUpdate(Layer* pLayer)
                          * pressed.
                          */
                         pCurrent->state = REGION_PRESSED;
-                        SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region);
+                        SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
                     }
                     else
                     {
@@ -120,7 +122,7 @@ void layerUpdate(Layer* pLayer)
                      * If hovering and pressed, then the region was pressed.
                      */
                     pCurrent->state = REGION_PRESSED;
-                    SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region);
+                    SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
                 }
                 break;
 
@@ -142,7 +144,7 @@ void layerUpdate(Layer* pLayer)
                         * we must have released.
                         */
                         pCurrent->state = REGION_HOVERED;
-                        SAFE_CB_CALL(pCurrent->region.cbOnReleased, &pCurrent->region);
+                        SAFE_CB_CALL(pCurrent->region.cbOnReleased, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
                     }
                 }
                 else
