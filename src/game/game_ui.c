@@ -63,8 +63,10 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegionClick cbOn
     gameAddRegion(252,240,63,12, GAME_UI_GADGET_INV_DOWN, MOUSE_USE);
     
     
+    
     // Screen
-
+    gameAddRegion(1,28,248,160, GAME_UI_GADGET_VIEWPORT, MOUSE_POINTER);
+    gameAddRegion(2,234,246,21, GAME_UI_GADGET_TEXTFIELD, MOUSE_POINTER);
     // Misc
     gameAddRegion(65,192,22,38, GAME_UI_GADGET_BATTERY, MOUSE_EXAMINE);
     gameAddRegion(178,192,66,38, GAME_UI_GADGET_MAP, MOUSE_EXAMINE);
