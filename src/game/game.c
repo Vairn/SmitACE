@@ -231,7 +231,8 @@ static void gameGsCreate(void)
     systemUnuse();
 
     gameUIInit(cbGameOnHovered, cbGameOnUnhovered, cbGameOnPressed, cbGameOnReleased);
-
+    Layer* pLayer = gameUIGetLayer();
+    layerEnablePointerUpdate(pLayer, 1);
     // viewUpdateCLUT(pScreen->_pView);
     ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
@@ -245,16 +246,7 @@ static void gameGsLoop(void)
     // Added to Test the mouse pointer code.
     // And sprite bitmap switching for AGA - VAIRN.
     gameUIUpdate();
-    if (mouseUse(MOUSE_PORT_1, MOUSE_LMB))
-    {
-        current_pointer_gfx += 1;
-        if (current_pointer_gfx == MOUSE_MAX_COUNT)
-        {
-            current_pointer_gfx = MOUSE_TEST;
-        }
-        // spriteSetOddColourPaletteBank(current_pointer_gfx);
-        mouse_pointer_switch(current_pointer_gfx);
-    }
+  
     if (g_ubGameActive)
     {
 
@@ -267,28 +259,28 @@ static void gameGsLoop(void)
         if (keyCheck(KEY_ESCAPE))
             gameExit();
 
-        if (keyCheck(KEY_W))
+        if (keyCheck(KEY_W) || keyCheck(KEY_UP))
         {
             MoveForwards();
         }
-        if (keyCheck(KEY_S))
+        if (keyCheck(KEY_S)|| keyCheck(KEY_DOWN))
         {
             MoveBackwards();
         }
-        if (keyCheck(KEY_A))
+        if (keyCheck(KEY_A) || keyCheck(KEY_LEFT))
         {
             MoveLeft();
         }
-        if (keyCheck(KEY_D))
+        if (keyCheck(KEY_D) || keyCheck(KEY_RIGHT))
         {
             MoveRight();
         }
 
-        if (keyCheck(KEY_Q))
+        if (keyCheck(KEY_Q) || keyCheck(KEY_HELP))
         {
             TurnLeft();
         }
-        if (keyCheck(KEY_E))
+        if (keyCheck(KEY_E)|| keyCheck(KEY_DEL))
         {
             TurnRight();
         }

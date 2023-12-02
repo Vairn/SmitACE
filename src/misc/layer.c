@@ -31,6 +31,7 @@ typedef struct _Layer
     RegionInternal *pFirstRegion;
     UBYTE ubIsEnabled;
     UBYTE ubUpdateOutsideBounds;
+    UBYTE ubMousePointerUpdateEnabled;
 } Layer;
 
 tUwRect calculateLayerBounds(Layer * pLayer);
@@ -171,8 +172,8 @@ void layerUpdate(Layer* pLayer)
 
         pCurrent = pCurrent->pNext;
     }
-
-    mouse_pointer_switch(mousePointerId);
+    if (pLayer->ubMousePointerUpdateEnabled)
+        mouse_pointer_switch(mousePointerId);
 }
 
 void layerDestroy(Layer* pLayer)
@@ -323,6 +324,17 @@ void layerRemoveRegion(Layer *pLayer, RegionId id)
     logBlockEnd("layerRemoveRegion");
 }
 
+void layerEnablePointerUpdate(Layer *pLayer, UBYTE ubEnable)
+{
+    if (!pLayer)
+    {
+        logWrite("layerEnablePointerUpdate: layer cannot be null");
+        return;
+    }
+
+    pLayer->ubMousePointerUpdateEnabled = ubEnable;
+}
+
 /*
  * Internal function.
  * Assumptions:
@@ -355,3 +367,4 @@ tUwRect calculateLayerBounds(Layer *pLayer)
         .uwWidth = maxX - minX, .uwHeight = maxY - minY
     };
 }
+

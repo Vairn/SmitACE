@@ -120,6 +120,13 @@ const Region* layerGetRegion(Layer *pLayer, RegionId id);
  */
 void layerRemoveRegion(Layer *pLayer, RegionId id);
 
+/**
+ * @brief Enable/Disable the auto update of the mouse pointer image
+ * 
+ * @param pLayer Layer to enable/disable pointers on
+ * @param ubEnable whether to enable (1) or disable(0) the pointer update
+ */
+void layerEnablePointerUpdate(Layer *pLayer, UBYTE ubEnable);
 
 #if !defined (SAFE_CB_CALL)
     #define SAFE_CB_CALL(fn, ...) if (fn) fn(__VA_ARGS__);
