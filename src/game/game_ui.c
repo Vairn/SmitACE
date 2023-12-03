@@ -35,7 +35,7 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegionClick cbOn
     s_cbOnReleased = cbOnReleased;
 
     // Create regions
-    gameAddRegion(0,0,8,8,GAME_UI_GADGET_MENU, MOUSE_POINTER);
+    gameAddRegion(261,42,45,45,GAME_UI_GADGET_MENU, MOUSE_POINTER);
     //gameAddRegion()
 
     // Movement

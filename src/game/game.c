@@ -240,7 +240,6 @@ static void gameGsCreate(void)
 
 static void gameGsLoop(void)
 {
-    static mouse_pointer_t current_pointer_gfx = MOUSE_POINTER;
     mouse_pointer_update();
 
     // Added to Test the mouse pointer code.

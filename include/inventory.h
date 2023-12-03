@@ -4,9 +4,9 @@
 
 typedef struct  _tInventory
 {
-    tItem* pItems[INVENTORY_MAX_ITEMS];
+    UBYTE pItems[INVENTORY_MAX_ITEMS];
     UBYTE ubItemCount;
-    tItem* pEquippedItem[4];
+    UBYTE pEquippedItem[4];
     UBYTE ubShowInventoryIndex;
-    
+
 } tInventory;
