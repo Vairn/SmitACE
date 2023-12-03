@@ -7,8 +7,8 @@ static Layer *s_gameUILayer = NULL;
 RegionId uiRegions[VIEWPORT_UI_GADGET_MAX];
 static cbRegion s_cbOnHovered;
 static cbRegion s_cbOnUnHovered;
-static cbRegion s_cbOnPressed;
-static cbRegion s_cbOnReleased;
+static cbRegionClick s_cbOnPressed;
+static cbRegionClick s_cbOnReleased;
 
 RegionId gameAddRegion(UWORD uwX, UWORD uwY, UWORD uwWidth, UWORD uwHeight, UBYTE ubContext, UBYTE ubPointer)
 {
