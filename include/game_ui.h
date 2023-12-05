@@ -5,3 +5,6 @@ void gameUIUpdate(void);
 void gameUIDestroy(void);
 
 Layer* gameUIGetLayer(void);
+
+void gameUpdateBattery(UBYTE ubBattery);
+

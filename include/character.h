@@ -68,6 +68,8 @@ typedef struct _characterParty
     UBYTE _PartyX;
     UBYTE _PartyY;
     UBYTE _PartyFacing;
+    // todo remove after doing proper character stuff for the engine
+    UBYTE _BatteryLevel;
     
 } tCharacterParty;
 

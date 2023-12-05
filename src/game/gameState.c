@@ -42,7 +42,7 @@ UBYTE InitNewGame()
     preFillPosDataNoFacing(g_mazePos);
     g_pGameState = (tGameState*)memAllocFastClear(sizeof(tGameState));
     g_pGameState->m_pCurrentParty = characterPartyCreate();
-
+    g_pGameState->m_pCurrentParty->_BatteryLevel = 10;
     // Failed to Init New Game
     return 0;
 }
@@ -89,6 +89,12 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
     {
         pParty->_PartyX =x;
         pParty->_PartyY =y;
+        pParty->_BatteryLevel--;
+        if (pParty->_BatteryLevel == 0)
+        {
+            // Battery Dead
+            return 2;
+        }
         // Moved
         return 1;
     }

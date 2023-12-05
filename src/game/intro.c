@@ -112,3 +112,4 @@ tState g_sStateIntro = {
 tState g_sStateLogo = {
   .cbCreate = logoGsCreate, .cbLoop = introGsLoop, .cbDestroy = introGsDestroy
 };
+

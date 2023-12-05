@@ -92,3 +92,9 @@ Layer *gameUIGetLayer()
 {
     return s_gameUILayer;
 }
+
+
+void gameUpdateBattery(UBYTE ubBattery)
+{
+    
+}

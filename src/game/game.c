@@ -17,7 +17,7 @@
 #include "game_ui_regions.h"
 ULONG seed = 1;
 #define SOFFX 5
-
+UBYTE s_lastMoveResult = 0;
 ULONG rand()
 {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
@@ -80,7 +80,7 @@ void MoveRight()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 1;
     modFace %= 4;
-    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
     g_ubRedrawRequire = 2;
 }
 
@@ -88,7 +88,7 @@ void MoveLeft()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 3;
     modFace %= 4;
-    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
     g_ubRedrawRequire = 2;
 }
 
@@ -96,7 +96,7 @@ void MoveBackwards()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
     modFace %= 4;
-    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+   s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
     g_ubRedrawRequire = 2;
 }
 
@@ -104,7 +104,7 @@ void MoveForwards()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing;
     modFace %= 4;
-    mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
     g_ubRedrawRequire = 2;
 }
 
@@ -248,6 +248,10 @@ static void gameGsLoop(void)
   
     if (g_ubGameActive)
     {
+        if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0 )
+        {
+            stateChange(g_pStateMachineGame, &g_sStateGameOver);
+        }
 
         if (g_ubRedrawRequire)
         {
