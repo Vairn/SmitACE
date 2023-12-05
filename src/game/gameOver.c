@@ -23,8 +23,8 @@ static void gameOverGsCreate(void)
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoad("data/title.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
-	tBitMap *pLogo = bitmapCreateFromFile("data/title.bm", 0);
+	paletteLoad("data/NoBattery.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromFile("data/NoBattery.bm", 0);
 	blitCopy(
 		pLogo, 0, 0, g_pMainScreen->_pBfr->pBack,
 		0, 0,

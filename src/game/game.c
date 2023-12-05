@@ -96,7 +96,7 @@ void MoveBackwards()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
     modFace %= 4;
-   s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
     g_ubRedrawRequire = 2;
 }
 
@@ -171,7 +171,7 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
         break;
     case GAME_UI_GADGET_INV_DOWN:
     case GAME_UI_GADGET_INV_UP:
-            handleInventoryScrolled(id - GAME_UI_GADGET_INV_UP, ubRight);
+        handleInventoryScrolled(id - GAME_UI_GADGET_INV_UP, ubRight);
         break;
     case GAME_UI_GADGET_MAP:
         handleMapClicked();
@@ -183,6 +183,13 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 
 void cbGameOnReleased(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
+}
+static void fadeCompleteNoBat(void)
+{
+    ptplayerEnableMusic(0);
+    ptplayerModDestroy(pMod);
+
+    stateChange(g_pStateMachineGame, &g_sStateGameOver);
 }
 
 static void fadeInComplete(void)
@@ -231,7 +238,7 @@ static void gameGsCreate(void)
     systemUnuse();
 
     gameUIInit(cbGameOnHovered, cbGameOnUnhovered, cbGameOnPressed, cbGameOnReleased);
-    Layer* pLayer = gameUIGetLayer();
+    Layer *pLayer = gameUIGetLayer();
     layerEnablePointerUpdate(pLayer, 1);
     // viewUpdateCLUT(pScreen->_pView);
     ScreenUpdate();
@@ -242,18 +249,18 @@ static void gameGsLoop(void)
 {
     mouse_pointer_update();
 
-    // Added to Test the mouse pointer code.
-    // And sprite bitmap switching for AGA - VAIRN.
-    gameUIUpdate();
-  
     if (g_ubGameActive)
     {
-        if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0 )
+        gameUIUpdate();
+
+        if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0)
         {
-            stateChange(g_pStateMachineGame, &g_sStateGameOver);
+            ScreenFadeToBlack(NULL, 7, fadeCompleteNoBat);
+            g_ubGameActive = 0;
+            g_ubRedrawRequire =0;
         }
 
-        if (g_ubRedrawRequire)
+       if (g_ubRedrawRequire)
         {
             drawView(g_pGameState, pScreen->_pBfr->pBack);
             g_ubRedrawRequire--;
@@ -266,7 +273,7 @@ static void gameGsLoop(void)
         {
             MoveForwards();
         }
-        if (keyCheck(KEY_S)|| keyCheck(KEY_DOWN))
+        if (keyCheck(KEY_S) || keyCheck(KEY_DOWN))
         {
             MoveBackwards();
         }
@@ -283,7 +290,7 @@ static void gameGsLoop(void)
         {
             TurnLeft();
         }
-        if (keyCheck(KEY_E)|| keyCheck(KEY_DEL))
+        if (keyCheck(KEY_E) || keyCheck(KEY_DEL))
         {
             TurnRight();
         }
@@ -295,7 +302,7 @@ static void gameGsLoop(void)
 static void gameGsDestroy(void)
 {
     gameUIDestroy();
-    ScreenFadeToBlack(NULL, 7, 0);
+    // ScreenFadeToBlack(NULL, 7, 0);
     bobManagerDestroy();
 }
 tState g_sStateGame = {
