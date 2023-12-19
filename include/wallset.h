@@ -33,6 +33,7 @@ typedef struct _wallset
 {
     
     UWORD _tilesetCount;
+    UWORD _gfxCount;
     UBYTE _paletteSize;
     UBYTE* _palette;
     tWallGfx** _tileset;

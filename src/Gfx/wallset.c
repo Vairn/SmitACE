@@ -64,6 +64,7 @@ tWallset *wallsetLoad(const char *fileName)
     tFile *pFile = fileOpen(fileName, "rb");
     if (pFile)
     {
+        systemUse();
         UWORD totalTilesetCount = 0;
         UBYTE paletteSize = 0;
         UBYTE *palette = 0;
@@ -110,8 +111,7 @@ tWallset *wallsetLoad(const char *fileName)
                 UWORD y=0;
                 UBYTE type = 0;
                 UBYTE setIndex = 0;
-                tBitMap *gfx = 0;
-                tBitMap *mask = 0;
+               
                 fileRead(pFile, &type, 1);
                 fileRead(pFile, &setIndex,1);
                 fileRead(pFile, location, 2);
@@ -144,6 +144,7 @@ tWallset *wallsetLoad(const char *fileName)
         pWallset->_paletteSize = paletteSize;
         pWallset->_palette = palette;
         pWallset->_tilesetCount = totalTilesetCount;
+        pWallset->_gfxCount = tilesetCount;
         pWallset->_tileset = tileset;
         pWallset->_gfx = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
         pWallset->_mask = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
@@ -171,8 +172,29 @@ tWallset *wallsetLoad(const char *fileName)
         // pWallset->_gfx = bitmapCreateFromFile(bitmapFile,0);
         // char* maskFile = replace_extension(fileName, ".msk");
         // pWallset->_mask = bitmapCreateFromFile(maskFile,0);
-
+        systemUnuse();
         return pWallset;
     }
     return 0;
+}
+
+void wallsetDestroy(tWallset* pWallset)
+{
+    if (pWallset == NULL)
+        return;
+   
+    for (int ts=0; ts<pWallset->_gfxCount; ts++) {
+        bitmapDestroy(pWallset->_gfx[ts]);
+        bitmapDestroy(pWallset->_mask[ts]);
+    }
+    for (int ts=0; ts<pWallset->_tilesetCount; ts++)
+    {
+        memFree(pWallset->_tileset[ts],sizeof(tWallGfx));
+    }
+    memFree(pWallset->_gfx,sizeof(tBitMap*)*pWallset->_gfxCount);
+    memFree(pWallset->_mask,sizeof(tBitMap*)*pWallset->_gfxCount);
+    memFree(pWallset->_tileset,sizeof(tWallGfx*)*pWallset->_tilesetCount);
+    memFree(pWallset->_palette,pWallset->_paletteSize*3);
+    memFree(pWallset,sizeof(tWallset));
+
 }

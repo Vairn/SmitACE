@@ -176,7 +176,41 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         UBYTE wmi = pMaze->_mazeData[mazeOffset];
         currentView[i] = wmi;
     }
-    blitCopy(g_pMazeBitmap, ((px - 6) * 5), 1+((py - 3) * 5), pCurrentBuffer, 182, 194, 60, 32, MINTERM_COOKIE);
+    WORD srcMapX = (px - 6) * 5;
+    WORD srcMapY = 1+(py - 3) * 5;
+    WORD dstMapX = 182;
+    WORD dstMapY = 194;
+    WORD width = 60;
+    WORD height = 32;
+    if(srcMapX < 0)
+    {
+        width = 60 + srcMapX;
+        srcMapX = 0;
+        dstMapX = 182 - (px - 6) * 5;
+        
+    }
+    if (srcMapY < 0)
+    {
+        height = 32 + srcMapY;
+        srcMapY = 0;
+        dstMapY = 194 - (py - 3) * 5;
+        
+    }
+    if (srcMapX > 5 * pMaze->_width)
+    {
+        width = width - (srcMapX - 5 * pMaze->_width);
+        srcMapX = 5 * pMaze->_width;
+        
+        
+    }
+    if (srcMapY > 5 * pMaze->_height)
+    {
+        height = height - (srcMapY - 5 * pMaze->_height);
+        srcMapY = 5 * pMaze->_height;
+    }
+    //blitCopy(g_pMazeBitmap, (MAX(0,), MAX(0,1+((py - 3) * 5)), pCurrentBuffer, 182, 194, 60, 32, MINTERM_COOKIE);
+    blitCopy(g_pMazeBitmap, srcMapX, srcMapY, pCurrentBuffer, dstMapX, dstMapY, width, height, MINTERM_COOKIE);
+    
     // blitRect(pCurrentBuffer, 250, 20, 7*8, 8*8,0);
     // for (int i=0; i<17; i++)
     // {
