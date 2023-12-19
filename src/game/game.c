@@ -184,6 +184,7 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 void cbGameOnReleased(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
 }
+
 static void fadeCompleteNoBat(void)
 {
     ptplayerEnableMusic(0);
@@ -210,30 +211,27 @@ static void gameGsCreate(void)
     pWallset = wallsetLoad("data/factory2/factory2.wll");
     g_pGameState->m_pCurrentWallset = pWallset;
 
-    pBackground = bitmapCreate(240, 180, 6, BMF_INTERLEAVED | BMF_CLEAR);
-    blitRect(pBackground, 0, 0, 240, 180, 0);
-
+    
     paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
     for (int p = 0; p < 256; p++)
     {
         ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
         pPalRef[p] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
     }
+    
     pMod = ptplayerModCreate("data/suspense.mod");
     ptplayerLoadMod(pMod, NULL, 0);
     ptplayerSetMasterVolume(64);
     ptplayerEnableMusic(1);
     tBitMap *pPlayfield = bitmapCreateFromFile("data/playfield.bm", 0);
-    blitCopy(pPlayfield, 0, 0, pScreen->_pBfr->pBack, 0, 0, 320, 256, MINTERM_COPY);
+    blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pBack, 0, 0, 320, 256);
     // ScreenUpdate();
-    blitCopy(pPlayfield, 0, 0, pScreen->_pBfr->pFront, 0, 0, 320, 256, MINTERM_COPY);
+    blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pFront, 0, 0, 320, 256);
     bitmapDestroy(pPlayfield);
     // do an initial render to both front and back.
-
-    blitCopy(pBackground, 0, 0, pScreen->_pBfr->pBack, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
     drawView(g_pGameState, pScreen->_pBfr->pBack);
-    blitCopy(pBackground, 0, 0, pScreen->_pBfr->pFront, SOFFX, SOFFX, 240, 180, MINTERM_COOKIE);
     drawView(g_pGameState, pScreen->_pBfr->pFront);
+    
     mouse_pointer_create("data/pointers.bm");
     systemUnuse();
 
@@ -301,9 +299,12 @@ static void gameGsLoop(void)
 
 static void gameGsDestroy(void)
 {
+    systemUse();
     gameUIDestroy();
+    FreeGameState();
     // ScreenFadeToBlack(NULL, 7, 0);
-    bobManagerDestroy();
+    //bobManagerDestroy();
+    systemUnuse();
 }
 tState g_sStateGame = {
     .cbCreate = gameGsCreate, .cbLoop = gameGsLoop, .cbDestroy = gameGsDestroy};
