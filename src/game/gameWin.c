@@ -1,4 +1,4 @@
-#include "gameOver.h"
+
 #include "smite.h"
 
 #include <ace/managers/viewport/simplebuffer.h>
@@ -15,16 +15,18 @@
 
 static tScreen *g_pMainScreen;
 
-static void gameOverGsCreate(void)
+static void winGsCreate(void)
 {
 
-	logBlockBegin("gameOverGsCreate()");
+	logBlockBegin("winGsCreate()");
 	systemUse();
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoad("data/NoBattery.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
-	tBitMap *pLogo = bitmapCreateFromFile("data/NoBattery.bm", 0);
+	paletteLoad("data/Win.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	
+	tBitMap *pLogo = bitmapCreateFromFile("data/Win_i.bm", 0);
+	
 	blitCopy(
 		pLogo, 0, 0, g_pMainScreen->_pBfr->pBack,
 		0, 0,
@@ -44,26 +46,25 @@ static void gameOverGsCreate(void)
 	timerCreate();
 }
 
-
-static void fadeCompleteGameOver(void)
+static void fadeCompleteWin(void)
 {
-  stateChange(g_pStateMachineGame, &g_sStateWin);
+  stateChange(g_pStateMachineGame, &g_sStateTitle);
 }
 
-static void gameOverGsLoop(void)
+
+static void winGsLoop(void)
 {
-	  if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
+		  if (keyUse(KEY_RETURN) || keyUse(KEY_ESCAPE) || keyUse(KEY_SPACE) ||
 		keyUse(KEY_LSHIFT) || keyUse(KEY_RSHIFT) ||
 		joyUse(JOY1 + JOY_FIRE) || joyUse(JOY2 + JOY_FIRE) || mouseUse(MOUSE_PORT_1, MOUSE_LMB) || mouseUse(MOUSE_PORT_1, MOUSE_RMB) || timerGet() > 200)
     {
-		ScreenFadeToBlack(NULL, 7, fadeCompleteGameOver);
+		ScreenFadeToBlack(NULL, 7, fadeCompleteWin);
 	}
-	
 	mouse_pointer_update();
 	ScreenUpdate();
 }
 
-static void gameOverGsDestroy(void)
+static void winGsDestroy(void)
 {
 	mouse_pointer_destroy();
 	// unload stuff here
@@ -71,5 +72,5 @@ static void gameOverGsDestroy(void)
 
 
 
-tState g_sStateGameOver = {
-	.cbCreate = gameOverGsCreate, .cbLoop = gameOverGsLoop, .cbDestroy = gameOverGsDestroy};
+tState g_sStateWin = {
+	.cbCreate = winGsCreate, .cbLoop = winGsLoop, .cbDestroy = winGsDestroy};

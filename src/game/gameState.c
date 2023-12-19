@@ -31,7 +31,7 @@ void FreeGameState()
         characterPartyDestroy(g_pGameState->m_pCurrentParty);
         g_pGameState->m_pCurrentParty = NULL;
     }
-    FreeMem(g_pGameState, sizeof(tGameState));
+    memFree(g_pGameState, sizeof(tGameState));
     g_pGameState = NULL;
     
 }
