@@ -38,7 +38,6 @@ static void gameOverGsCreate(void)
 	bitmapDestroy(pLogo);
 
 	ScreenFadeFromBlack(NULL, 7, 0);
-	mouse_pointer_create("data/pointers.bm");
 
 	systemUnuse();
 	timerCreate();
@@ -59,13 +58,13 @@ static void gameOverGsLoop(void)
 		ScreenFadeToBlack(NULL, 7, fadeCompleteGameOver);
 	}
 	
-	mouse_pointer_update();
+	
 	ScreenUpdate();
 }
 
 static void gameOverGsDestroy(void)
 {
-	mouse_pointer_destroy();
+	
 	// unload stuff here
 }
 

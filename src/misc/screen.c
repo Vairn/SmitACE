@@ -5,6 +5,7 @@
 #include <ace/managers/system.h>
 #include <ace/managers/memory.h>
 #include <ace/macros.h>
+#include "mouse_pointer.h"
 
 tScreen *g_pCurrentScreen = NULL;
 
@@ -33,6 +34,11 @@ tScreen *CreateNewScreen(BYTE palCount)
                                                TAG_END);
 
         pNewScreen->_pFade = fadeCreate(pNewScreen->_pView, pNewScreen->_pView->pFirstVPort->pPalette, 255);
+
+    spriteManagerCreate(pNewScreen->_pView, 0);
+    systemSetDmaBit(DMAB_SPRITE, 1);
+    
+	mouse_pointer_create("data/pointers.bm");
 
         return pNewScreen;
     }
@@ -74,6 +80,9 @@ tScreen *ScreenGetActive(void)
 
 void ScreenUpdate(void)
 {
+    systemSetDmaBit(DMAB_SPRITE, 1);
+    
+    mouse_pointer_update();
     if (g_pCurrentScreen->_pFade->eState != FADE_STATE_IDLE)
     {
         fadeProcess(g_pCurrentScreen->_pFade);
@@ -106,6 +115,9 @@ void ScreenClose()
 {
     if (g_pCurrentScreen)
     {
+        systemSetDmaBit(DMAB_SPRITE, 0);
+
+        mouse_pointer_destroy();
         simpleBufferDestroy(g_pCurrentScreen->_pBfr);
         viewDestroy(g_pCurrentScreen->_pView);
         fadeDestroy(g_pCurrentScreen->_pFade);

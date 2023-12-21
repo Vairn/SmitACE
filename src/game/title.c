@@ -120,7 +120,7 @@ static void titleGsCreate(void)
 	bitmapDestroy(pLogo);
 
 	ScreenFadeFromBlack(NULL, 7, 0);
-	mouse_pointer_create("data/pointers.bm");
+	
 
 	g_pMenuItems = bitmapCreateFromFile("data/MenuItems.bm", 0);
 
@@ -174,7 +174,6 @@ static void titleGsCreate(void)
 static void titleGsLoop(void)
 {
 	layerUpdate(s_menuLayer);
-	mouse_pointer_update();
 	ScreenUpdate();
 }
 
@@ -186,7 +185,7 @@ static void titleGsDestroy(void)
 	layerRemoveRegion(s_menuLayer, exitGameRegionId);
 	
 	layerDestroy(s_menuLayer);
-	mouse_pointer_destroy();
+	
 	// unload stuff here
 }
 

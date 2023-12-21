@@ -232,7 +232,7 @@ static void gameGsCreate(void)
     drawView(g_pGameState, pScreen->_pBfr->pBack);
     drawView(g_pGameState, pScreen->_pBfr->pFront);
     
-    mouse_pointer_create("data/pointers.bm");
+    
     systemUnuse();
 
     gameUIInit(cbGameOnHovered, cbGameOnUnhovered, cbGameOnPressed, cbGameOnReleased);
@@ -245,7 +245,7 @@ static void gameGsCreate(void)
 
 static void gameGsLoop(void)
 {
-    mouse_pointer_update();
+    
 
     if (g_ubGameActive)
     {
@@ -302,8 +302,6 @@ static void gameGsDestroy(void)
     systemUse();
     gameUIDestroy();
     FreeGameState();
-    // ScreenFadeToBlack(NULL, 7, 0);
-    //bobManagerDestroy();
     systemUnuse();
 }
 tState g_sStateGame = {

@@ -59,10 +59,8 @@ void mouse_pointer_create(char const *filepath)
     }
 
     bitmapDestroy(atlas);
-    tScreen* g_main_screen = ScreenGetActive();
-    spriteManagerCreate(g_main_screen->_pView, 0);
-    systemSetDmaBit(DMAB_SPRITE, 1);
 
+   
     current_pointer0_ = spriteAdd(0, pointers_low_[MOUSE_POINTER]);
     spriteSetEnabled(current_pointer0_, 1);
 
@@ -104,6 +102,4 @@ void mouse_pointer_destroy(void)
     spriteRemove(current_pointer0_);
     spriteRemove(current_pointer1_);
 
-    systemSetDmaBit(DMAB_SPRITE, 0);
-    spriteManagerDestroy();
 }
