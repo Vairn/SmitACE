@@ -208,37 +208,15 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         height = height - (srcMapY - 5 * pMaze->_height);
         srcMapY = 5 * pMaze->_height;
     }
-    //blitCopy(g_pMazeBitmap, (MAX(0,), MAX(0,1+((py - 3) * 5)), pCurrentBuffer, 182, 194, 60, 32, MINTERM_COOKIE);
     blitCopy(g_pMazeBitmap, srcMapX, srcMapY, pCurrentBuffer, dstMapX, dstMapY, width, height, MINTERM_COOKIE);
     
-    // blitRect(pCurrentBuffer, 250, 20, 7*8, 8*8,0);
-    // for (int i=0; i<17; i++)
-    // {
-    //     //if (currentView[i] == 1)
-    //     //{
-    //         blitRect(pCurrentBuffer,
-    //         278+(g_mazePos[i].xDelta*8),
-    //         46+(g_mazePos[i].yDelta*8), 8, 8, currentView[i]);
-    //     //}
-    // }
     cleanUpView(currentView);
-    //  for (int i=0; i<17; i++)
-    //     {
-    //         //if (currentView[i] == 1)
-    //         //{
-    //             blitRect(pCurrentBuffer,
-    //             278+(g_mazePos[i].xDelta*8),
-    //             86+(g_mazePos[i].yDelta*8), 8, 8, currentView[i]);
-    //         //}
-    //     }
-    // draw the view
-    // 5int j = 0;
-    UBYTE j = 0;
+    
     for (UBYTE i = 0; i < 18; i++)
     {
         BYTE tx = g_mazePos[i].xDelta;
         BYTE ty = g_mazePos[i].yDelta;
-        // for (UBYTE w = 52; w < 90; ++w)
+    
         for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
