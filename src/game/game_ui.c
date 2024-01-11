@@ -19,7 +19,7 @@ RegionId gameAddRegion(UWORD uwX, UWORD uwY, UWORD uwWidth, UWORD uwHeight, UBYT
 		.cbOnUnhovered = s_cbOnUnHovered,
 		.cbOnPressed = s_cbOnPressed,
 		.cbOnReleased = s_cbOnReleased,
-		.context = (void *)ubContext};
+		.context = (void *)(int)ubContext};
 
     RegionId regionId = layerAddRegion(s_gameUILayer, &new_region);
     uiRegions[ubContext] = regionId;

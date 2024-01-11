@@ -5,6 +5,8 @@
 #include <ace/managers/system.h>
 #include <ace/managers/memory.h>
 #include <ace/macros.h>
+#include <ace/managers/sprite.h>
+
 #include "mouse_pointer.h"
 
 tScreen *g_pCurrentScreen = NULL;
