@@ -264,6 +264,8 @@ static void gameGsLoop(void)
             g_ubRedrawRequire--;
         }
 
+        gameUpdateBattery(g_pGameState->m_pCurrentParty->_BatteryLevel);
+        
         if (keyCheck(KEY_ESCAPE))
             gameExit();
 
