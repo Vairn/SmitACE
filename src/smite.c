@@ -8,9 +8,20 @@
 #include <ace/managers/state.h>
 #include <ace/managers/ptplayer.h>
 #include <gcc8_c_support.h>
+#include <proto/exec.h> // Bartman's compiler needs this
+#include <proto/dos.h> // Bartman's compiler needs this
+#include <ace/managers/memory.h>
+#include <ace/managers/system.h>
+#include <ace/managers/log.h>
+
+#ifdef AMIGA
+#include <clib/exec_protos.h> // AvailMem, AllocMem, FreeMem, etc.
+#endif
 tStateManager *g_pStateMachineGame;
 
-
+ULONG memGetFastSize(void) {
+	return AvailMem(MEMF_FAST);
+}
 
 void genericCreate(void) {
 
@@ -21,6 +32,7 @@ void genericCreate(void) {
 	ptplayerCreate(1);
 	stateChange(g_pStateMachineGame, &g_sStateTitle);
 	systemUnuse();
+	ULONG memFree = memGetFastSize();
 	//AllocateCommandList();
 }
 

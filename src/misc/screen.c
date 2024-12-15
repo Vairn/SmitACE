@@ -69,7 +69,7 @@ tScreen *ScreenGetActive(void)
             systemUnuse();
         }
 
-        ScreenMakeActive(g_pCurrentScreen);
+        viewLoad(g_pCurrentScreen->_pView);
 
         if (ubSystemUsed)
         {
