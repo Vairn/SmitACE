@@ -105,8 +105,8 @@ static void titleGsCreate(void)
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoad("data/title.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
-	tBitMap *pLogo = bitmapCreateFromFile("data/title.bm", 0);
+	paletteLoadFromPath("data/title.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromPath("data/title.bm", 0);
 	blitCopy(
 		pLogo, 0, 0, g_pMainScreen->_pBfr->pBack,
 		0, 0,
@@ -122,7 +122,7 @@ static void titleGsCreate(void)
 	ScreenFadeFromBlack(NULL, 7, 0);
 	
 
-	g_pMenuItems = bitmapCreateFromFile("data/MenuItems.bm", 0);
+	g_pMenuItems = bitmapCreateFromPath("data/MenuItems.bm", 0);
 
 	s_menuLayer = layerCreate();
 	Region newGameButton = {

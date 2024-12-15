@@ -13,7 +13,7 @@ void LoadUIGraphics(const char* sFilename)
     systemUse();
     // load the bitmap.
     char* bitmapFile = replace_extension(sFilename, ".bm");
-    s_pBitmap = bitmapCreateFromFile(bitmapFile,FALSE);
+    s_pBitmap = bitmapCreateFromPath(bitmapFile,FALSE);
     char* maskFile = replace_extension(sFilename, ".msk");
            
     memFree(bitmapFile,strlen(bitmapFile)+1);

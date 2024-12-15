@@ -25,6 +25,7 @@ tScreen *CreateNewScreen(BYTE palCount)
 
         pNewScreen->_pVp = vPortCreate(0,
                                        TAG_VPORT_BPP, 8,
+                                       TAG_VPORT_FMODE,3,
                                        TAG_VPORT_VIEW, pNewScreen->_pView,
                                        TAG_END);
 

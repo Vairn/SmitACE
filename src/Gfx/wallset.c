@@ -6,7 +6,7 @@
 
 tWallset *wallsetLoad(const char *fileName)
 {
-    tFile *pFile = fileOpen(fileName, "rb");
+    tFile *pFile = diskFileOpen(fileName, "rb");
     if (pFile)
     {
         systemUse();
@@ -97,10 +97,10 @@ tWallset *wallsetLoad(const char *fileName)
         {
             char* bitmapFile = replace_extension(fileName, ".pln");
             bitmapFile = addPostfixToFile(bitmapFile, "_", ts);
-            pWallset->_gfx[ts] = bitmapCreateFromFile(bitmapFile,0);
+            pWallset->_gfx[ts] = bitmapCreateFromPath(bitmapFile,0);
             char* maskFile = replace_extension(fileName, ".msk");
             maskFile = addPostfixToFile(maskFile, "_", ts);
-            pWallset->_mask[ts] = bitmapCreateFromFile(maskFile,0);
+            pWallset->_mask[ts] = bitmapCreateFromPath(maskFile,0);
         /*    if (pWallset->_gfx[ts]==0)
             {
                 pWallset->_gfx[ts] = bitmapCreate(20,20,1,BMF_CLEAR);
@@ -114,9 +114,9 @@ tWallset *wallsetLoad(const char *fileName)
        
         }
         // char* bitmapFile = replace_extension(fwwileName, ".pln");
-        // pWallset->_gfx = bitmapCreateFromFile(bitmapFile,0);
+        // pWallset->_gfx = bitmapCreateFromPath(bitmapFile,0);
         // char* maskFile = replace_extension(fileName, ".msk");
-        // pWallset->_mask = bitmapCreateFromFile(maskFile,0);
+        // pWallset->_mask = bitmapCreateFromPath(maskFile,0);
         systemUnuse();
         return pWallset;
     }

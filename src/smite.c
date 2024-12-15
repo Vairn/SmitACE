@@ -7,7 +7,7 @@
 #include <ace/managers/system.h>
 #include <ace/managers/state.h>
 #include <ace/managers/ptplayer.h>
-#include <gcc8_c_support.h>
+//#include <gcc8_c_support.h>
 #include <proto/exec.h> // Bartman's compiler needs this
 #include <proto/dos.h> // Bartman's compiler needs this
 #include <ace/managers/memory.h>

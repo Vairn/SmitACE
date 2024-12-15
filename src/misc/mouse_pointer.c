@@ -22,7 +22,7 @@ static tSprite *current_pointer1_; // attached sprite.
 void mouse_pointer_create(char const *filepath)
 {
     systemUse();
-    tBitMap *atlas = bitmapCreateFromFile(filepath, 0);
+    tBitMap *atlas = bitmapCreateFromPath(filepath, 0);
 
     for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
     {

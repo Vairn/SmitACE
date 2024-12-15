@@ -16,9 +16,9 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 	pFade->eState = FADE_STATE_IDLE;
 	pFade->pView = pView;
 	pFade->ubColorCount = ubColorCount;
-	if (pView->uwFlags & VIEWPORT_USES_AGA)
+	if (pView->uwFlags & VP_FLAG_AGA)
 	{
-		pFade->pPaletteRef = memAllocFastClear(sizeof(ULONG) * (1 << pView->pFirstVPort->ubBPP));
+		pFade->pPaletteRef = memAllocFastClear(sizeof(ULONG) * (1 << pView->pFirstVPort->ubBpp));
 	}
 	else
 	{
@@ -41,10 +41,10 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 
 void fadeDestroy(tFade *pFade)
 {
-	if (pFade->pView->uwFlags & VIEWPORT_USES_AGA)
+	if (pFade->pView->uwFlags & VP_FLAG_AGA)
 	{
 		// AGA uses 24 bit palette entries.
-		memFree(pFade->pPaletteRef, sizeof(ULONG) * (1 << pFade->pView->pFirstVPort->ubBPP));
+		memFree(pFade->pPaletteRef, sizeof(ULONG) * (1 << pFade->pView->pFirstVPort->ubBpp));
 	}
 	else
 	{
@@ -82,7 +82,7 @@ tFadeState fadeProcess(tFade *pFade)
 			ubCnt = pFade->ubCntEnd - pFade->ubCnt;
 		}
 
-		if (pFade->pView->uwFlags & VIEWPORT_USES_AGA)
+		if (pFade->pView->uwFlags & VP_FLAG_AGA)
 		{
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
 			paletteDimAGA(
@@ -96,7 +96,7 @@ tFadeState fadeProcess(tFade *pFade)
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
 		}
-		viewUpdatePalette(pFade->pView);
+		viewUpdateGlobalPalette(pFade->pView);
 
 		UBYTE ubVolume = (64 * ubCnt) / pFade->ubCntEnd;
 		ptplayerSetMasterVolume(ubVolume);

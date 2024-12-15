@@ -212,18 +212,19 @@ static void gameGsCreate(void)
     g_pGameState->m_pCurrentWallset = pWallset;
 
     
-    paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
+        paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
+("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
     for (int p = 0; p < 256; p++)
     {
         ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
         pPalRef[p] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
     }
     
-    pMod = ptplayerModCreate("data/suspense.mod");
+    pMod = ptplayerModCreateFromPath("data/suspense.mod");
     ptplayerLoadMod(pMod, NULL, 0);
     ptplayerSetMasterVolume(64);
     ptplayerEnableMusic(1);
-    tBitMap *pPlayfield = bitmapCreateFromFile("data/playfield.bm", 0);
+    tBitMap *pPlayfield = bitmapCreateFromPath("data/playfield.bm", 0);
     blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pBack, 0, 0, 320, 256);
     // ScreenUpdate();
     blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pFront, 0, 0, 320, 256);

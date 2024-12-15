@@ -23,9 +23,9 @@ static void winGsCreate(void)
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoad("data/Win.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	paletteLoadFromPath("data/Win.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
 	
-	tBitMap *pLogo = bitmapCreateFromFile("data/Win_i.bm", 0);
+	tBitMap *pLogo = bitmapCreateFromPath("data/Win_i.bm", 0);
 	
 	blitCopy(
 		pLogo, 0, 0, g_pMainScreen->_pBfr->pBack,

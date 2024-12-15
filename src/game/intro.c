@@ -21,8 +21,8 @@ systemUse();
 	logBlockBegin("introGsCreate()");
 	tScreen* pScreen = ScreenGetActive();
   //UWORD pPaletteRef[256];
-	paletteLoad("data/jamelogo.plt", pScreen->_pFade->pPaletteRef, 255);
-	tBitMap *pLogo = bitmapCreateFromFile("data/jamelogo.bm", 0);
+	paletteLoadFromPath("data/jamelogo.plt", pScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromPath("data/jamelogo.bm", 0);
   	blitCopy(
 		pLogo, 0, 0, pScreen->_pBfr->pBack,
 		0,0,
@@ -46,8 +46,8 @@ static void logoGsCreate(void)
   systemUse();
   logBlockBegin("logoGsCreate()");
   tScreen* pScreen = ScreenGetActive();
-  paletteLoad("data/playfield.plt", pScreen->_pFade->pPaletteRef, 255);
-	tBitMap *pLogo = bitmapCreateFromFile("data/dt.bm", 0);
+  paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 255);
+	tBitMap *pLogo = bitmapCreateFromPath("data/dt.bm", 0);
   	blitCopy(
 		pLogo, 0, 0, pScreen->_pBfr->pBack,
 		0,0,
