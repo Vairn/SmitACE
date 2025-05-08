@@ -3,6 +3,7 @@
 #include <ace/managers/memory.h>
 #include <ace/utils/bitmap.h>
 #include "gfx_util.h"
+#include <ace/utils/disk_file.h>
 
 tWallset *wallsetLoad(const char *fileName)
 {
@@ -19,28 +20,22 @@ tWallset *wallsetLoad(const char *fileName)
 
         fileRead(pFile, &paletteSize, 1);
         palette = (UBYTE *)memAllocFastClear(paletteSize * 3);
-        // fileRead(pFile, palette, paletteSize * 3);
-        for (UBYTE p = 0; p < paletteSize; p++)
-        {
-            UBYTE r;
-            UBYTE g;
-            UBYTE b;
-            fileRead(pFile, &r, 1);
-            fileRead(pFile, &g, 1);
-            fileRead(pFile, &b, 1);
-
-            palette[p * 3] = r;
-            palette[p * 3 + 1] = g;
-            palette[p * 3 + 2] = b;
-        }
+        // Read palette data in bulk
+        fileRead(pFile, palette, paletteSize * 3);
 
         fileRead(pFile, &totalTilesetCount, 2);
         UBYTE tilesetCount = 0;
         fileRead(pFile, &tilesetCount, 1);
 
+        // Allocate all tileset structures in one block
+        tWallGfx *tilesetData = (tWallGfx *)memAllocFastClear(sizeof(tWallGfx) * totalTilesetCount);
         tileset = (tWallGfx **)memAllocFastClear(sizeof(tWallGfx *) * totalTilesetCount);
+        
+        // Set up the pointers to the pre-allocated structures
+        for (int i = 0; i < totalTilesetCount; i++) {
+            tileset[i] = &tilesetData[i];
+        }
 
-        // for (int i = 0; i < totalTilesetCount; i++)
         int i = 0;
         for (int ts = 0; ts < tilesetCount; ts++)
         {
@@ -67,8 +62,6 @@ tWallset *wallsetLoad(const char *fileName)
                 fileRead(pFile, &width, 2);
                 fileRead(pFile, &height, 2);
 
-               
-                tileset[i] = (tWallGfx *)memAllocFastClear(sizeof(tWallGfx));
                 tileset[i]->_location[0] = location[0];
                 tileset[i]->_location[1] = location[1];
                 tileset[i]->_screen[0] = screen[0];
@@ -82,7 +75,6 @@ tWallset *wallsetLoad(const char *fileName)
                 
                 i++;
             }
-            // tileset[i]->_gfx = gfx;
         }
         // Tile sets loaded, now allocate the wallset GFX, and Mask.
         tWallset *pWallset = (tWallset *)memAllocFastClear(sizeof(tWallset));
@@ -93,30 +85,56 @@ tWallset *wallsetLoad(const char *fileName)
         pWallset->_tileset = tileset;
         pWallset->_gfx = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
         pWallset->_mask = (tBitMap**)memAllocFastClear(sizeof(tBitMap*)*tilesetCount);
-        for (int ts=0; ts<tilesetCount; ts++)
-        {
-            char* bitmapFile = replace_extension(fileName, ".pln");
-            bitmapFile = addPostfixToFile(bitmapFile, "_", ts);
-            pWallset->_gfx[ts] = bitmapCreateFromPath(bitmapFile,0);
-            char* maskFile = replace_extension(fileName, ".msk");
-            maskFile = addPostfixToFile(maskFile, "_", ts);
-            pWallset->_mask[ts] = bitmapCreateFromPath(maskFile,0);
-        /*    if (pWallset->_gfx[ts]==0)
-            {
-                pWallset->_gfx[ts] = bitmapCreate(20,20,1,BMF_CLEAR);
-            }
-            if (pWallset->_mask[ts]==0)
-            {
-                pWallset->_mask[ts] = bitmapCreate(20,20,1,BMF_CLEAR);
-            }*/
-            memFree(bitmapFile,strlen(bitmapFile)+1);
-            memFree(maskFile,strlen(maskFile)+1);
-       
+
+        // Find the last dot in the filename
+        const char* lastDot = fileName;
+        for(const char* p = fileName; *p; p++) {
+            if(*p == '.') lastDot = p;
         }
-        // char* bitmapFile = replace_extension(fwwileName, ".pln");
-        // pWallset->_gfx = bitmapCreateFromPath(bitmapFile,0);
-        // char* maskFile = replace_extension(fileName, ".msk");
-        // pWallset->_mask = bitmapCreateFromPath(maskFile,0);
+        
+        // Load all bitmaps
+        for (int ts=0; ts<tilesetCount; ts++) {
+            // Build filenames directly without extra allocations
+            char gfxPath[256];
+            char maskPath[256];
+            int baseLen = lastDot - fileName;
+            
+            // Copy base name
+            memcpy(gfxPath, fileName, baseLen);
+            memcpy(maskPath, fileName, baseLen);
+            
+            // Add suffix and extension
+            gfxPath[baseLen] = '_';
+            maskPath[baseLen] = '_';
+            
+            // Convert number to string
+            char numStr[8];
+            int numLen = 0;
+            int num = ts;
+            do {
+                numStr[numLen++] = '0' + (num % 10);
+                num /= 10;
+            } while(num > 0);
+            
+            // Reverse the number string
+            for(int i = 0; i < numLen/2; i++) {
+                char temp = numStr[i];
+                numStr[i] = numStr[numLen-1-i];
+                numStr[numLen-1-i] = temp;
+            }
+            
+            // Add number and extension
+            memcpy(gfxPath + baseLen + 1, numStr, numLen);
+            memcpy(maskPath + baseLen + 1, numStr, numLen);
+            memcpy(gfxPath + baseLen + 1 + numLen, ".pln", 4);
+            memcpy(maskPath + baseLen + 1 + numLen, ".msk", 4);
+            gfxPath[baseLen + 1 + numLen + 4] = '\0';
+            maskPath[baseLen + 1 + numLen + 4] = '\0';
+            
+            pWallset->_gfx[ts] = bitmapCreateFromPath(gfxPath, 0);
+            pWallset->_mask[ts] = bitmapCreateFromPath(maskPath, 0);
+        }
+        
         systemUnuse();
         return pWallset;
     }

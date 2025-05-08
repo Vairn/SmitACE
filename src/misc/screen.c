@@ -84,8 +84,14 @@ tScreen *ScreenGetActive(void)
 void ScreenUpdate(void)
 {
     systemSetDmaBit(DMAB_SPRITE, 1);
-    
+
     mouse_pointer_update();
+    // int k = 0;
+    // for(int i = 0; i < 10000; i++)
+    // {
+    //     k++;
+    //     // do nothing
+    // }
     if (g_pCurrentScreen->_pFade->eState != FADE_STATE_IDLE)
     {
         fadeProcess(g_pCurrentScreen->_pFade);

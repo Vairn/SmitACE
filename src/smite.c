@@ -7,7 +7,7 @@
 #include <ace/managers/system.h>
 #include <ace/managers/state.h>
 #include <ace/managers/ptplayer.h>
-//#include <gcc8_c_support.h>
+#include <bartman/gcc8_c_support.h>
 #include <proto/exec.h> // Bartman's compiler needs this
 #include <proto/dos.h> // Bartman's compiler needs this
 #include <ace/managers/memory.h>
@@ -32,7 +32,7 @@ void genericCreate(void) {
 	ptplayerCreate(1);
 	stateChange(g_pStateMachineGame, &g_sStateTitle);
 	systemUnuse();
-	ULONG memFree = memGetFastSize();
+	//ULONG memFree = memGetFastSize();
 	//AllocateCommandList();
 }
 

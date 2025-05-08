@@ -3,7 +3,7 @@
 #include <ace/managers/memory.h>
 #include <ace/managers/system.h>
 #include <ace/utils/file.h>
-
+#include <ace/utils/disk_file.h>
 unsigned char demomap[] = {
   
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -64,7 +64,7 @@ tMaze* mazeCreate(UBYTE width, UBYTE height)
 tMaze* mazeLoad(const char* filename)
 {
     
-    tFile* pFile = fileOpen(filename, "rb");
+    tFile* pFile = diskFileOpen(filename, "rb");
     if (pFile)
     {
         UBYTE width = 0;
@@ -113,7 +113,7 @@ tMaze* mazeLoad(const char* filename)
 
 void mazeSave(tMaze* pMaze, const char* sFilename)
 {
-    tFile* pFile = fileOpen(sFilename, "wb");
+    tFile* pFile = diskFileOpen(sFilename, "wb");
     if (pFile)
     {
         fileWrite(pFile, &pMaze->_width, 1);

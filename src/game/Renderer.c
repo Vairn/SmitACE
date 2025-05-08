@@ -174,7 +174,7 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
 
         UWORD mazeOffset = (py + y) * pMaze->_width + (px + x);
         UBYTE wmi = pMaze->_mazeData[mazeOffset];
-        currentView[i] = wmi;
+        //currentView[i] = wmi;
     }
     WORD srcMapX = (px - 6) * 5;
     WORD srcMapY = 1+(py - 3) * 5;
@@ -214,6 +214,30 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
     
     for (UBYTE i = 0; i < 18; i++)
     {
+           BYTE x = 0;
+        BYTE y = 0;
+        if (facing % 2 == 0)
+        {
+            x = g_mazeDr[facing].xs * g_mazePos[i].xDelta;
+            y = g_mazeDr[facing].ys * g_mazePos[i].yDelta;
+        }
+        else
+        {
+            x = g_mazeDr[facing].xs * g_mazePos[i].yDelta;
+            y = g_mazeDr[facing].ys * g_mazePos[i].xDelta;
+        }
+        if ((px + x) < 0 || (py + y) < 0)
+        {
+            continue;
+        }
+        if ((px + x) > pMaze->_width || (py + y) > pMaze->_height)
+        {
+            continue;
+        }
+
+        UWORD mazeOffset = (py + y) * pMaze->_width + (px + x);
+        UBYTE wmi = pMaze->_mazeData[mazeOffset];
+     
         BYTE tx = g_mazePos[i].xDelta;
         BYTE ty = g_mazePos[i].yDelta;
     
@@ -221,7 +245,11 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if (currentView[i] == pWallset->_tileset[w]->_type )
+                if ((wmi == pWallset->_tileset[w]->_type) 
+                || (wmi == 2 && pWallset->_tileset[w]->_type == 0)
+                || (wmi == 3 && pWallset->_tileset[w]->_type == 0)
+                || (wmi == 4 && pWallset->_tileset[w]->_type == 0)
+                || (wmi == 5 && pWallset->_tileset[w]->_type == 0))
                  {
                     blitCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
                      pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y,
