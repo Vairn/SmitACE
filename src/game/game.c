@@ -299,8 +299,6 @@ static void gameGsCreate(void)
 
 static void gameGsLoop(void)
 {
-    
-
     if (g_ubGameActive)
     {
         gameUIUpdate();
@@ -309,10 +307,14 @@ static void gameGsLoop(void)
         {
             ScreenFadeToBlack(NULL, 7, fadeCompleteNoBat);
             g_ubGameActive = 0;
-            g_ubRedrawRequire =0;
+            g_ubRedrawRequire = 0;
         }
 
-       if (g_ubRedrawRequire)
+        // Update door animations
+        doorAnimUpdate(g_pGameState->m_pCurrentMaze);
+        g_ubRedrawRequire = 2;
+
+        if (g_ubRedrawRequire)
         {
             drawView(g_pGameState, pScreen->_pBfr->pBack);
             g_ubRedrawRequire--;

@@ -1,5 +1,6 @@
 #include "script.h"
 #include "gameState.h"
+#include <ace/managers/memory.h>
 
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
 {
@@ -44,13 +45,25 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
             UBYTE doorX = pEvent->_eventData[0];
             UBYTE doorY = pEvent->_eventData[1];
             logWrite("Opening door at (%d,%d)\n", doorX, doorY);
+            // Create door animation
+            tDoorAnim* anim = doorAnimCreate(doorX, doorY, DOOR_ANIM_OPENING_1);
+            doorAnimAdd(pMaze, anim);
+            // Set the door to open state in the map
             pMaze->_mazeData[doorX + doorY * pMaze->_width] = MAZE_DOOR_OPEN;
         } else {
             logWrite("Opening door at event position (%d,%d)\n", pEvent->_x, pEvent->_y);
+            // Create door animation
+            tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_OPENING_1);
+            doorAnimAdd(pMaze, anim);
+            // Set the door to open state in the map
             pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR_OPEN;
         }
         break;
     case EVENT_CLOSEDOOR:
+        // Create door animation
+        tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_CLOSING_1);
+        doorAnimAdd(pMaze, anim);
+        // Set the door to closed state in the map
         pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR;
         break;
     case EVENT_BATTERY_CHARGER:
@@ -67,7 +80,29 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
         }
         break;
     case EVENT_TELEPORT:
-
+        // Event data should contain target x,y coordinates
+        if (pEvent->_eventDataSize >= 2) {
+            UBYTE targetX = pEvent->_eventData[0];
+            UBYTE targetY = pEvent->_eventData[1];
+            logWrite("Teleporting party to (%d,%d)\n", targetX, targetY);
+            
+            // Check if target position is valid
+            if (targetX < pMaze->_width && targetY < pMaze->_height) {
+                // Check if target position is walkable
+                UBYTE targetCell = pMaze->_mazeData[targetX + targetY * pMaze->_width];
+                if (targetCell == MAZE_FLOOR || targetCell == MAZE_DOOR_OPEN) {
+                    g_pGameState->m_pCurrentParty->_PartyX = targetX;
+                    g_pGameState->m_pCurrentParty->_PartyY = targetY;
+                   
+                } else {
+                    logWrite("Cannot teleport to invalid position (%d,%d)\n", targetX, targetY);
+                }
+            } else {
+                logWrite("Invalid teleport coordinates (%d,%d)\n", targetX, targetY);
+            }
+        } else {
+            logWrite("Invalid teleport event data size\n");
+        }
         break;
     case EVENT_GIVEITEM:
 
@@ -103,7 +138,27 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
 
         break;
     case EVENT_TURN:
-
+        // Event data should contain direction (0=left, 1=right) and count
+        if (pEvent->_eventDataSize >= 2) {
+            UBYTE direction = pEvent->_eventData[0];
+            UBYTE count = pEvent->_eventData[1];
+            logWrite("Turning party %s %d times\n", direction ? "right" : "left", count);
+            
+            // Apply turns
+            for (UBYTE i = 0; i < count; i++) {
+                if (direction) {
+                    // Turn right
+                    g_pGameState->m_pCurrentParty->_PartyFacing++;
+                    g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
+                } else {
+                    // Turn left
+                    g_pGameState->m_pCurrentParty->_PartyFacing--;
+                    g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
+                }
+            }
+        } else {
+            logWrite("Invalid turn event data size\n");
+        }
         break;
     case EVENT_IDENTIFYITEMS:
 
@@ -216,6 +271,101 @@ void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE e
         logWrite("Event appended to maze, total events: %d\n", pMaze->_eventCount);
     } else {
         logWrite("Failed to create event\n");
+    }
+}
+
+// Door animation functions
+tDoorAnim* doorAnimCreate(UBYTE x, UBYTE y, UBYTE state)
+{
+    tDoorAnim* anim = (tDoorAnim*)memAllocFast(sizeof(tDoorAnim));
+    if (anim) {
+        anim->x = x;
+        anim->y = y;
+        anim->state = state;
+        anim->timer = 0;
+        anim->next = NULL;
+    }
+    return anim;
+}
+
+void doorAnimAdd(tMaze* maze, tDoorAnim* anim)
+{
+    if (!anim) return;
+    
+    // Add to front of list
+    anim->next = maze->_doorAnims;
+    maze->_doorAnims = anim;
+}
+
+void doorAnimRemove(tMaze* maze, tDoorAnim* anim)
+{
+    if (!anim || !maze->_doorAnims) return;
+    
+    if (maze->_doorAnims == anim) {
+        maze->_doorAnims = anim->next;
+        memFree(anim, sizeof(tDoorAnim));
+        return;
+    }
+    
+    tDoorAnim* current = maze->_doorAnims;
+    while (current->next) {
+        if (current->next == anim) {
+            current->next = anim->next;
+            memFree(anim, sizeof(tDoorAnim));
+            return;
+        }
+        current = current->next;
+    }
+}
+
+tDoorAnim* doorAnimFind(tMaze* maze, UBYTE x, UBYTE y)
+{
+    tDoorAnim* current = maze->_doorAnims;
+    while (current) {
+        if (current->x == x && current->y == y) {
+            return current;
+        }
+        current = current->next;
+    }
+    return NULL;
+}
+
+void doorAnimUpdate(tMaze* maze)
+{
+    tDoorAnim* current = maze->_doorAnims;
+    while (current) {
+        tDoorAnim* next = current->next;
+        
+        // Update timer
+        if (++current->timer >= 5) { // Adjust timing as needed
+            current->timer = 0;
+            
+            // Update animation state
+            switch (current->state) {
+                case DOOR_ANIM_OPENING_1:
+                    current->state = DOOR_ANIM_OPENING_2;
+                    break;
+                case DOOR_ANIM_OPENING_2:
+                    current->state = DOOR_ANIM_OPENING_3;
+                    break;
+                case DOOR_ANIM_OPENING_3:
+                    current->state = DOOR_ANIM_OPEN;
+                    doorAnimRemove(maze, current); // Animation complete
+                    break;
+                case DOOR_ANIM_CLOSING_1:
+                    current->state = DOOR_ANIM_CLOSING_2;
+                    break;
+                case DOOR_ANIM_CLOSING_2:
+                    current->state = DOOR_ANIM_CLOSING_3;
+                    break;
+                case DOOR_ANIM_CLOSING_3:
+                    current->state = DOOR_ANIM_NONE;
+                    doorAnimRemove(maze, current); // Animation complete
+                    break;
+            }
+        }
+        
+        current = next;
     }
 }
 
