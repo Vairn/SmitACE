@@ -64,7 +64,7 @@ tMaze* mazeCreate(UBYTE width, UBYTE height)
 tMaze* mazeLoad(const char* filename)
 {
     
-    tFile* pFile = diskFileOpen(filename, "rb");
+    tFile* pFile = diskFileOpen(filename, DISK_FILE_MODE_READ, 1);
     if (pFile)
     {
         UBYTE width = 0;
@@ -113,7 +113,7 @@ tMaze* mazeLoad(const char* filename)
 
 void mazeSave(tMaze* pMaze, const char* sFilename)
 {
-    tFile* pFile = diskFileOpen(sFilename, "wb");
+    tFile* pFile = diskFileOpen(sFilename, DISK_FILE_MODE_WRITE, 1);
     if (pFile)
     {
         fileWrite(pFile, &pMaze->_width, 1);

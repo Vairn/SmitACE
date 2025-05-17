@@ -7,7 +7,7 @@
 
 tWallset *wallsetLoad(const char *fileName)
 {
-    tFile *pFile = diskFileOpen(fileName, "rb");
+    tFile *pFile = diskFileOpen(fileName, DISK_FILE_MODE_READ, 1);
     if (pFile)
     {
         systemUse();

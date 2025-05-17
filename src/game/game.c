@@ -211,9 +211,6 @@ static void gameGsCreate(void)
     pWallset = wallsetLoad("data/factory2/factory2.wll");
     g_pGameState->m_pCurrentWallset = pWallset;
 
-    
-        paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
-//("data/playfield.plt", pScreen->_pFade->pPaletteRef, 64);
     for (int p = 0; p < 256; p++)
     {
         ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;

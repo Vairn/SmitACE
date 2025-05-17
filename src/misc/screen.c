@@ -38,7 +38,7 @@ tScreen *CreateNewScreen(BYTE palCount)
 
         pNewScreen->_pFade = fadeCreate(pNewScreen->_pView, pNewScreen->_pView->pFirstVPort->pPalette, 255);
 
-    spriteManagerCreate(pNewScreen->_pView, 0);
+    spriteManagerCreate(pNewScreen->_pView, 0, NULL);
     systemSetDmaBit(DMAB_SPRITE, 1);
     
 	mouse_pointer_create("data/pointers.bm");
