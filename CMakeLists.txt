@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(Smite LANGUAGES ASM C)
 
-set(CMAKE_C_STANDARD 17)
+#set(CMAKE_C_STANDARD 17)
 file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 set(ACE_USE_AGA_FEATURES ON)
+set(ACE_USE_ECS_FEATURES ON)
+set(ACE_DEBUG_UAE ON)
 if(ELF2HUNK)
 	set(SMITE_EXECUTABLE smite.elf)
 	set(SMITE_OUTPUT_EXECUTABLE smite.exe)
@@ -45,7 +47,7 @@ set(VERSION "${VER_MAJOR}.${VER_MINOR}.${VER_FIX}")
 target_compile_definitions(${SMITE_EXECUTABLE} PRIVATE smite_VERSION="${VERSION}")
 include_directories(${SDL2_INCLUDE_DIRS} include/)
 target_link_libraries(${SMITE_EXECUTABLE} ace )  
-target_compile_options(${SMITE_EXECUTABLE} PUBLIC -Wall)
+target_compile_options(${SMITE_EXECUTABLE} PUBLIC -fomit-frame-pointer)
 
 
 if(GAME_DEBUG)

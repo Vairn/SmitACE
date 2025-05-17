@@ -18,6 +18,9 @@
 #define MAZE_FLOOR 0
 #define MAZE_WALL 1
 #define MAZE_DOOR 2
+#define MAZE_DOOR_OPEN 3
+#define MAZE_DOOR_LOCKED 4
+#define MAZE_EVENT_TRIGGER 5
 
 typedef struct _mazeevent {
     UBYTE _x;

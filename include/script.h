@@ -109,4 +109,7 @@
 #define EVENT_NOT_EQUAL 219
 #define EVENT_EQUAL 220
 
+#define EVENT_BATTERY_CHARGER 221
+
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
+void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);

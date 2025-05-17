@@ -121,6 +121,39 @@ void cbGameOnHovered(Region *pRegion)
     }
 }
 
+void handleDoorClick(UBYTE x, UBYTE y)
+{
+    tMaze* pMaze = g_pGameState->m_pCurrentMaze;
+    UBYTE cellType = mazeGetCell(pMaze, x, y);
+    
+    switch (cellType)
+    {
+    case MAZE_DOOR:
+        // Create door event to open door
+        UBYTE eventData[1] = {0};
+        tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 1, eventData);
+        handleEvent(pMaze, pEvent);
+        mazeRemoveEvent(pMaze, pEvent);
+        g_ubRedrawRequire = 2;
+        break;
+        
+    case MAZE_DOOR_OPEN:
+        // Create door event to close door
+        eventData[0] = 0;
+        pEvent = mazeEventCreate(x, y, EVENT_CLOSEDOOR, 1, eventData);
+        handleEvent(pMaze, pEvent);
+        mazeRemoveEvent(pMaze, pEvent);
+        g_ubRedrawRequire = 2;
+        break;
+        
+    case MAZE_DOOR_LOCKED:
+        // Check if player has key (you can implement key checking logic here)
+        // For now, just show a message that the door is locked
+        // You can add a message event here
+        break;
+    }
+}
+
 void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
     UBYTE id = ((UBYTE)(ULONG)pRegion->context);
@@ -156,7 +189,6 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
     case GAME_UI_GADGET_EQUIPMENT_4:
         if (ubLeft)
             handleEquipmentClicked(id - GAME_UI_GADGET_EQUIPMENT_1);
-
         if (ubRight)
             handleEquipmentUsed(id - GAME_UI_GADGET_EQUIPMENT_1);
         break;
@@ -175,6 +207,30 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
         break;
     case GAME_UI_GADGET_MAP:
         handleMapClicked();
+        break;
+    case VIEWPORT_UI_GADGET_DOOR:
+        if (ubLeft)
+        {
+            // Get the door position based on player's position and facing
+            UBYTE doorX = g_pGameState->m_pCurrentParty->_PartyX;
+            UBYTE doorY = g_pGameState->m_pCurrentParty->_PartyY;
+            switch (g_pGameState->m_pCurrentParty->_PartyFacing)
+            {
+            case 0: // North
+                doorY--;
+                break;
+            case 1: // East
+                doorX++;
+                break;
+            case 2: // South
+                doorY++;
+                break;
+            case 3: // West
+                doorX--;
+                break;
+            }
+            handleDoorClick(doorX, doorY);
+        }
         break;
     default:
         break;

@@ -74,7 +74,6 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
         x--;
         break;
     default:
-
         break;
     }
 
@@ -84,11 +83,17 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
         return 0;
     }
 
-    UWORD nazeOffset = (y)*pMaze->_width + (x);
-    if (pMaze->_mazeData[nazeOffset] != 1)
+    UWORD mazeOffset = (y)*pMaze->_width + (x);
+    UBYTE cellType = pMaze->_mazeData[mazeOffset];
+    
+    // Handle different cell types
+    switch (cellType)
     {
-        pParty->_PartyX =x;
-        pParty->_PartyY =y;
+    case MAZE_FLOOR:
+    case MAZE_DOOR_OPEN:
+        // Allow movement through floors and open doors
+        pParty->_PartyX = x;
+        pParty->_PartyY = y;
         pParty->_BatteryLevel--;
         if (pParty->_BatteryLevel == 0)
         {
@@ -97,7 +102,43 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
         }
         // Moved
         return 1;
+        
+    case MAZE_EVENT_TRIGGER:
+        // Trigger any events at this location
+        logWrite("Stepped on event trigger at (%d,%d)\n", x, y);
+        tMazeEvent* currentEvent = pMaze->_events;
+        UBYTE eventFound = 0;
+        while (currentEvent != NULL)
+        {
+            if (currentEvent->_x == x && currentEvent->_y == y)
+            {
+                logWrite("Found matching event at (%d,%d)\n", currentEvent->_x, currentEvent->_y);
+                eventFound = 1;
+                handleEvent(pMaze, currentEvent);
+                // Don't remove the event, as it can be triggered multiple times
+            }
+            currentEvent = currentEvent->_next;
+        }
+        if (!eventFound) {
+            logWrite("No matching event found at trigger location\n");
+        }
+        // Allow movement through event triggers
+        pParty->_PartyX = x;
+        pParty->_PartyY = y;
+        pParty->_BatteryLevel--;
+        if (pParty->_BatteryLevel == 0)
+        {
+            return 2;
+        }
+        return 1;
+        
+    case MAZE_DOOR_LOCKED:
+        // Check if player has key (you can implement key checking logic here)
+        // For now, just prevent movement
+        return 0;
+        
+    default:
+        // Prevent movement through walls and closed doors
+        return 0;
     }
-
-    return 0;
 }

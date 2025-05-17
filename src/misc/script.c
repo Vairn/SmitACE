@@ -1,6 +1,12 @@
 #include "script.h"
+#include "gameState.h"
+
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
 {
+    // Debug output
+    logWrite("Handling event type %d at (%d,%d) with data size %d\n", 
+        pEvent->_eventType, pEvent->_x, pEvent->_y, pEvent->_eventDataSize);
+    
     switch (pEvent->_eventType)
     {
     case EVENT_SETWALL:
@@ -33,10 +39,32 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
         
         break;
     case EVENT_OPENDOOR:
-        
+        // If event data contains coordinates, use those instead of event position
+        if (pEvent->_eventDataSize >= 2) {
+            UBYTE doorX = pEvent->_eventData[0];
+            UBYTE doorY = pEvent->_eventData[1];
+            logWrite("Opening door at (%d,%d)\n", doorX, doorY);
+            pMaze->_mazeData[doorX + doorY * pMaze->_width] = MAZE_DOOR_OPEN;
+        } else {
+            logWrite("Opening door at event position (%d,%d)\n", pEvent->_x, pEvent->_y);
+            pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR_OPEN;
+        }
         break;
     case EVENT_CLOSEDOOR:
-
+        pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR;
+        break;
+    case EVENT_BATTERY_CHARGER:
+        // Check if charger has power left
+        if (pEvent->_eventDataSize > 0 && pEvent->_eventData[0] > 0) {
+            // Recharge battery by 1 unit
+            g_pGameState->m_pCurrentParty->_BatteryLevel++;
+            // Decrease charger power by 1
+            pEvent->_eventData[0]--;
+            logWrite("Battery recharged to %d, charger has %d units left\n", 
+                g_pGameState->m_pCurrentParty->_BatteryLevel, pEvent->_eventData[0]);
+        } else {
+            logWrite("Battery charger at (%d,%d) is depleted\n", pEvent->_x, pEvent->_y);
+        }
         break;
     case EVENT_TELEPORT:
 
@@ -171,3 +199,29 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
         break;
     }
 }
+
+void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData)
+{
+    logWrite("Creating event trigger at (%d,%d) type %d with data size %d\n", 
+        x, y, eventType, eventDataSize);
+    
+    // Set the cell as an event trigger
+    pMaze->_mazeData[x + y * pMaze->_width] = MAZE_EVENT_TRIGGER;
+    
+    // Create and add the event
+    tMazeEvent* pEvent = mazeEventCreate(x, y, eventType, eventDataSize, eventData);
+    if (pEvent) {
+        logWrite("Event created successfully\n");
+        mazeAppendEvent(pMaze, pEvent);
+        logWrite("Event appended to maze, total events: %d\n", pMaze->_eventCount);
+    } else {
+        logWrite("Failed to create event\n");
+    }
+}
+
+// Example usage:
+// To create a button that opens a door:
+// UBYTE doorX = 5, doorY = 5;
+// UBYTE buttonX = 3, buttonY = 3;
+// UBYTE eventData[2] = {doorX, doorY};
+// createEventTrigger(pMaze, buttonX, buttonY, EVENT_OPENDOOR, 2, eventData);
