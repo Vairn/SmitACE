@@ -7,6 +7,8 @@
 #include "mouse_pointer.h"
 #include "screen.h"
 
+#define REGION_HASH_SIZE 32
+#define REGION_HASH_MASK (REGION_HASH_SIZE - 1)
 
 enum eRegionState
 {
@@ -29,9 +31,12 @@ typedef struct _Layer
     UWORD uwRegionCount;
     RegionId nextRegionId;
     RegionInternal *pFirstRegion;
+    RegionInternal *pLastRegion;
+    RegionInternal *pRegionHash[REGION_HASH_SIZE];  // Simple hash table for region lookups
     UBYTE ubIsEnabled;
     UBYTE ubUpdateOutsideBounds;
     UBYTE ubMousePointerUpdateEnabled;
+    UBYTE ubBoundsDirty;
 } Layer;
 
 tUwRect calculateLayerBounds(Layer * pLayer);
@@ -47,7 +52,6 @@ Layer* layerCreate(void)
 
 void layerUpdate(Layer* pLayer)
 {
-    //logBlockBegin("layerUpdate");
     if (!pLayer)
     {
         logWrite("layerUpdate: layer cannot be null");
@@ -61,47 +65,57 @@ void layerUpdate(Layer* pLayer)
         return;
     }
 
-    RegionInternal *pCurrent = pLayer->pFirstRegion;
+    // Cache all mouse state at the start
     UBYTE ubMousePressedLeft = mouseCheck(MOUSE_PORT_1, MOUSE_LMB);
     UBYTE ubMousePressedRight = mouseCheck(MOUSE_PORT_1, MOUSE_RMB);
     UBYTE ubMousePressed = ubMousePressedLeft || ubMousePressedRight;
     mouse_pointer_t mousePointerId = MOUSE_POINTER;
+    
+    // Cache mouse position
+    UWORD uwMouseX = mouseGetX(MOUSE_PORT_1);
+    UWORD uwMouseY = mouseGetY(MOUSE_PORT_1);
+
+    // Update bounds if dirty
+    if (pLayer->ubBoundsDirty)
+    {
+        pLayer->bounds = calculateLayerBounds(pLayer);
+        pLayer->ubBoundsDirty = 0;
+    }
+
+    RegionInternal *pCurrent = pLayer->pFirstRegion;
     while (pCurrent)
     {
-        UBYTE ubOverRegion = mouseInRect(MOUSE_PORT_1, pCurrent->region.bounds);
+        // Fast mouse position check using cached coordinates
+        UBYTE ubOverRegion = (
+            uwMouseX >= pCurrent->region.bounds.uwX &&
+            uwMouseX < (pCurrent->region.bounds.uwX + pCurrent->region.bounds.uwWidth) &&
+            uwMouseY >= pCurrent->region.bounds.uwY &&
+            uwMouseY < (pCurrent->region.bounds.uwY + pCurrent->region.bounds.uwHeight)
+        );
+
         if (ubOverRegion)
         {
             mousePointerId = pCurrent->region.pointer;
         }
 
+        // Optimized state machine with combined conditions
         switch (pCurrent->state)
         {
             case REGION_IDLE:
                 if (ubOverRegion)
                 {
+                    pCurrent->state = ubMousePressed ? REGION_PRESSED : REGION_HOVERED;
                     if (ubMousePressed)
                     {
-                        /*
-                         * If the mouse is pressed while hovering, go straight to
-                         * pressed.
-                         */
-                        pCurrent->state = REGION_PRESSED;
                         SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
                     }
                     else
                     {
-                        /*
-                         * If hovering without pressing, just go to hovered.
-                         */
-                        pCurrent->state = REGION_HOVERED;
                         SAFE_CB_CALL(pCurrent->region.cbOnHovered, &pCurrent->region);
                     }
                 }
                 else
                 {
-                    /*
-                     * If not hovered, keep idling.
-                     */
                     SAFE_CB_CALL(pCurrent->region.cbOnIdle, &pCurrent->region);
                 }
                 break;
@@ -109,71 +123,41 @@ void layerUpdate(Layer* pLayer)
             case REGION_HOVERED:
                 if (!ubOverRegion)
                 {
-                    /*
-                     * Regardless of mouse state, if we are no longer on the
-                     * region, it should go back to idle. Note that "hot-hovered"
-                     * and "pressed" are not a valid combination for this state.
-                     */
                     pCurrent->state = REGION_IDLE;
-                    SAFE_CB_CALL(pCurrent->region.cbOnUnhovered ,&pCurrent->region);
+                    SAFE_CB_CALL(pCurrent->region.cbOnUnhovered, &pCurrent->region);
                 }
-                else if (ubOverRegion && ubMousePressed)
+                else if (ubMousePressed)
                 {
-                    /*
-                     * If hovering and pressed, then the region was pressed.
-                     */
                     pCurrent->state = REGION_PRESSED;
                     SAFE_CB_CALL(pCurrent->region.cbOnPressed, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
                 }
                 break;
 
             case REGION_PRESSED:
-                if (ubOverRegion)
+                if (!ubOverRegion)
                 {
-                    if (ubMousePressed)
-                    {
-                        /*
-                        * If the mouse is pressed and we're over the region, stop
-                        * processing so we don't keep sending onPressed events.
-                        */
-                        break;
-                    }
-                    else
-                    {
-                        /* 
-                        * If the mouse is not pressed and we're over the region,
-                        * we must have released.
-                        */
-                        pCurrent->state = REGION_HOVERED;
-                        SAFE_CB_CALL(pCurrent->region.cbOnReleased, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
-                    }
-                }
-                else
-                {
-                    /*
-                     * Regardless of the mouse state, if we move off the region
-                     * it should be considered idle. This allows us to "cancel",
-                     * a press on region my moving off of it. If we're no longer
-                     * over the region, we must unhover
-                     */
                     pCurrent->state = REGION_IDLE;
                     SAFE_CB_CALL(pCurrent->region.cbOnUnhovered, &pCurrent->region);
                 }
-
+                else if (!ubMousePressed)
+                {
+                    pCurrent->state = REGION_HOVERED;
+                    SAFE_CB_CALL(pCurrent->region.cbOnReleased, &pCurrent->region, ubMousePressedLeft, ubMousePressedRight);
+                }
                 break;
 
             default:
                 logWrite("layerUpdate: Unknown region state %d", pCurrent->state);
                 break;
-        };
-
-        // Lastly, if the region is either hovered or pressed, changed the mouse
-        // pointer.
+        }
 
         pCurrent = pCurrent->pNext;
     }
+
     if (pLayer->ubMousePointerUpdateEnabled)
+    {
         mouse_pointer_switch(mousePointerId);
+    }
 }
 
 void layerDestroy(Layer* pLayer)
@@ -218,8 +202,6 @@ void layerSetUpdateOutsideBounds(Layer *pLayer, UBYTE ubUpdateOutsideBounds)
 
 RegionId layerAddRegion(Layer *pLayer, Region *pRegion)
 {
-    RegionInternal * pLastRegion = NULL;
-
     logBlockBegin("layerAddRegion");
     if (!pLayer)
     {
@@ -244,8 +226,13 @@ RegionId layerAddRegion(Layer *pLayer, Region *pRegion)
     pLayer->nextRegionId++;
 
     memcpy(&pNewRegion->region, pRegion, sizeof(Region));
-    pNewRegion->region.bounds.uwY ;//+= g_mainScreen->uwOffset;
+    pNewRegion->region.bounds.uwY;//+= g_mainScreen->uwOffset;
     pNewRegion->pNext = 0;
+
+    // Add to hash table
+    UWORD hashIndex = pNewRegion->id & REGION_HASH_MASK;
+    pNewRegion->pNext = pLayer->pRegionHash[hashIndex];
+    pLayer->pRegionHash[hashIndex] = pNewRegion;
 
     if (!pLayer->pFirstRegion)
     {
@@ -253,16 +240,10 @@ RegionId layerAddRegion(Layer *pLayer, Region *pRegion)
     }
     else
     {
-        pLastRegion = pLayer->pFirstRegion;
-        while (pLastRegion->pNext)
-        {
-            pLastRegion = pLastRegion->pNext;
-        }
-
-        pLastRegion->pNext = pNewRegion;
+        pLayer->pLastRegion->pNext = pNewRegion;
     }
-
-    pLayer->bounds = calculateLayerBounds(pLayer);
+    pLayer->pLastRegion = pNewRegion;
+    pLayer->ubBoundsDirty = 1;
 
     logBlockEnd("layerAddRegion");
 
@@ -277,7 +258,9 @@ const Region *layerGetRegion(Layer *pLayer, RegionId id)
         return 0;
     }
 
-    RegionInternal *pCurrent = pLayer->pFirstRegion;
+    // Use hash table for lookup
+    UWORD hashIndex = id & REGION_HASH_MASK;
+    RegionInternal *pCurrent = pLayer->pRegionHash[hashIndex];
     while (pCurrent && pCurrent->id != id)
     {
         pCurrent = pCurrent->pNext;
@@ -295,17 +278,12 @@ void layerRemoveRegion(Layer *pLayer, RegionId id)
         return;
     }
 
-    RegionInternal *pPrev, *pCurrent;
-    pCurrent = pLayer->pFirstRegion;
-
-    if (pCurrent->id == id)
-    {
-        pLayer->pFirstRegion = pCurrent->pNext;
-        memFree(pCurrent, sizeof(RegionInternal));
-        return;
-    }
-
-    while(pCurrent != 0 && pCurrent->id != id)
+    // Remove from hash table
+    UWORD hashIndex = id & REGION_HASH_MASK;
+    RegionInternal *pPrev = NULL;
+    RegionInternal *pCurrent = pLayer->pRegionHash[hashIndex];
+    
+    while(pCurrent && pCurrent->id != id)
     {
         pPrev = pCurrent;
         pCurrent = pCurrent->pNext;
@@ -317,9 +295,28 @@ void layerRemoveRegion(Layer *pLayer, RegionId id)
         return;
     }
 
-    pPrev->pNext = pCurrent->pNext;
+    // Update hash table
+    if (pPrev)
+    {
+        pPrev->pNext = pCurrent->pNext;
+    }
+    else
+    {
+        pLayer->pRegionHash[hashIndex] = pCurrent->pNext;
+    }
 
-    pLayer->bounds = calculateLayerBounds(pLayer);
+    // Update first/last pointers if needed
+    if (pCurrent == pLayer->pFirstRegion)
+    {
+        pLayer->pFirstRegion = pCurrent->pNext;
+    }
+    if (pCurrent == pLayer->pLastRegion)
+    {
+        pLayer->pLastRegion = pPrev;
+    }
+
+    memFree(pCurrent, sizeof(RegionInternal));
+    pLayer->ubBoundsDirty = 1;
 
     logBlockEnd("layerRemoveRegion");
 }
@@ -339,27 +336,26 @@ void layerEnablePointerUpdate(Layer *pLayer, UBYTE ubEnable)
  * Internal function.
  * Assumptions:
  *   - layer is not null
- *   - layer hast at least one region
+ *   - layer has at least one region
  */
 tUwRect calculateLayerBounds(Layer *pLayer)
 {
     tUwRect *pBounds = &pLayer->pFirstRegion->region.bounds;
-
     UWORD minX = pBounds->uwX;
     UWORD minY = pBounds->uwY;
     UWORD maxX = minX + pBounds->uwWidth;
     UWORD maxY = minY + pBounds->uwHeight;
 
-    RegionInternal *pLastRegion = pLayer->pFirstRegion->pNext;
-    while (pLastRegion)
+    // Skip first region since we already processed it
+    RegionInternal *pCurrent = pLayer->pFirstRegion->pNext;
+    while (pCurrent)
     {
-        pBounds = &pLastRegion->region.bounds;
+        pBounds = &pCurrent->region.bounds;
         minX = MIN(minX, pBounds->uwX);
         minY = MIN(minY, pBounds->uwY);
         maxX = MAX(maxX, pBounds->uwX + pBounds->uwWidth);
         maxY = MAX(maxY, pBounds->uwY + pBounds->uwHeight);
-
-        pLastRegion = pLastRegion->pNext;
+        pCurrent = pCurrent->pNext;
     }
 
     return (tUwRect) {
