@@ -24,25 +24,19 @@
 
 // Door animation states
 #define DOOR_ANIM_NONE 0
-#define DOOR_ANIM_OPENING_1 1
-#define DOOR_ANIM_OPENING_2 2
-#define DOOR_ANIM_OPENING_3 3
-#define DOOR_ANIM_OPENING_4 4
-#define DOOR_ANIM_OPENING_5 5
-#define DOOR_ANIM_OPENING_6 6
-#define DOOR_ANIM_OPEN 7
-#define DOOR_ANIM_CLOSING_1 8
-#define DOOR_ANIM_CLOSING_2 9
-#define DOOR_ANIM_CLOSING_3 10
-#define DOOR_ANIM_CLOSING_4 11
-#define DOOR_ANIM_CLOSING_5 12
-#define DOOR_ANIM_CLOSING_6 13
+#define DOOR_ANIM_OPENING 1
+#define DOOR_ANIM_CLOSING 2
+
+// Door animation constants
+#define DOOR_ANIM_FRAMES 6  // Number of frames in the animation
+#define DOOR_ANIM_FRAME_TIME 1  // How many game ticks each frame lasts
 
 typedef struct _doorAnim {
     BYTE x;
     BYTE y;
-    UBYTE state;
-    UBYTE timer;
+    UBYTE state;      // DOOR_ANIM_OPENING or DOOR_ANIM_CLOSING
+    UBYTE frame;      // Current frame (0 to DOOR_ANIM_FRAMES-1)
+    UBYTE timer;      // Frame timer
     struct _doorAnim* next;
 } tDoorAnim;
 

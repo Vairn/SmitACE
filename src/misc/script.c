@@ -46,14 +46,14 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
             UBYTE doorY = pEvent->_eventData[1];
             logWrite("Opening door at (%d,%d)\n", doorX, doorY);
             // Create door animation
-            tDoorAnim* anim = doorAnimCreate(doorX, doorY, DOOR_ANIM_OPENING_1);
+            tDoorAnim* anim = doorAnimCreate(doorX, doorY, DOOR_ANIM_OPENING);
             doorAnimAdd(pMaze, anim);
             // Set the door to open state in the map
             pMaze->_mazeData[doorX + doorY * pMaze->_width] = MAZE_DOOR_OPEN;
         } else {
             logWrite("Opening door at event position (%d,%d)\n", pEvent->_x, pEvent->_y);
             // Create door animation
-            tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_OPENING_1);
+            tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_OPENING);
             doorAnimAdd(pMaze, anim);
             // Set the door to open state in the map
             pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR_OPEN;
@@ -61,7 +61,7 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent)
         break;
     case EVENT_CLOSEDOOR:
         // Create door animation
-        tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_CLOSING_1);
+        tDoorAnim* anim = doorAnimCreate(pEvent->_x, pEvent->_y, DOOR_ANIM_CLOSING);
         doorAnimAdd(pMaze, anim);
         // Set the door to closed state in the map
         pMaze->_mazeData[pEvent->_x + pEvent->_y * pMaze->_width] = MAZE_DOOR;
@@ -282,6 +282,7 @@ tDoorAnim* doorAnimCreate(BYTE x, BYTE y, UBYTE state)
         anim->x = x;
         anim->y = y;
         anim->state = state;
+        anim->frame = 0;  // Start at first frame
         anim->timer = 0;
         anim->next = NULL;
     }
@@ -337,49 +338,13 @@ void doorAnimUpdate(tMaze* maze)
         tDoorAnim* next = current->next;
         
         // Update timer
-        if (++current->timer >= 1) { // Reduced from 5 to 2 frames for faster animation
+        if (++current->timer >= DOOR_ANIM_FRAME_TIME) {
             current->timer = 0;
             
-            // Update animation state
-            switch (current->state) {
-                case DOOR_ANIM_OPENING_1:
-                    current->state = DOOR_ANIM_OPENING_2;
-                    break;
-                case DOOR_ANIM_OPENING_2:
-                    current->state = DOOR_ANIM_OPENING_3;
-                    break;
-                case DOOR_ANIM_OPENING_3:
-                    current->state = DOOR_ANIM_OPENING_4;
-                    break;
-                case DOOR_ANIM_OPENING_4:
-                    current->state = DOOR_ANIM_OPENING_5;
-                    break;
-                case DOOR_ANIM_OPENING_5:
-                    current->state = DOOR_ANIM_OPENING_6;
-                    break;
-                case DOOR_ANIM_OPENING_6:
-                    current->state = DOOR_ANIM_OPEN;
-                    doorAnimRemove(maze, current);
-                    break;
-                case DOOR_ANIM_CLOSING_1:
-                    current->state = DOOR_ANIM_CLOSING_2;
-                    break;
-                case DOOR_ANIM_CLOSING_2:
-                    current->state = DOOR_ANIM_CLOSING_3;
-                    break;
-                case DOOR_ANIM_CLOSING_3:
-                    current->state = DOOR_ANIM_CLOSING_4;
-                    break;
-                case DOOR_ANIM_CLOSING_4:
-                    current->state = DOOR_ANIM_CLOSING_5;
-                    break;
-                case DOOR_ANIM_CLOSING_5:
-                    current->state = DOOR_ANIM_CLOSING_6;
-                    break;
-                case DOOR_ANIM_CLOSING_6:
-                    current->state = DOOR_ANIM_NONE;
-                    doorAnimRemove(maze, current);
-                    break;
+            // Update frame
+            if (++current->frame >= DOOR_ANIM_FRAMES) {
+                // Animation complete, remove it
+                doorAnimRemove(maze, current);
             }
         }
         

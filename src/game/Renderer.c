@@ -132,86 +132,51 @@ void cleanUpView(UBYTE *pCurrentView)
 UBYTE renderDoor(tWallset *pWallset, tMaze *pMaze, tBitMap *pCurrentBuffer,
                  BYTE tx, BYTE ty, UBYTE px, UBYTE py, UBYTE x, UBYTE y)
 {
-    // Find the door graphics (MAZE_DOOR)
-    for (UBYTE doorW = 0; doorW < pWallset->_tilesetCount; ++doorW)
-    {
+    // Find the door graphics (MAZE_DOOR) first
+    UBYTE doorW;
+    for (doorW = 0; doorW < pWallset->_tilesetCount; ++doorW) {
         if (tx == pWallset->_tileset[doorW]->_location[0] &&
             ty == pWallset->_tileset[doorW]->_location[1] &&
-            pWallset->_tileset[doorW]->_type != 0 &&
-            MAZE_DOOR == pWallset->_tileset[doorW]->_type)
-        {
-
-            // Check for active door animation
-            tDoorAnim *anim = doorAnimFind(pMaze, px + x, py + y);
-            if (anim)
-            {
-                UBYTE doorHeight = pWallset->_tileset[doorW]->_height;
-                UBYTE yOffset = 0;
-
-                switch (anim->state)
-                {
-                case DOOR_ANIM_OPENING_1:
-                    doorHeight = (doorHeight * 15) / 16; // 93.75% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                case DOOR_ANIM_OPENING_2:
-                    doorHeight = (doorHeight * 13) / 16; // 81.25% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                case DOOR_ANIM_OPENING_3:
-                    doorHeight = (doorHeight * 11) / 16; // 68.75% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                case DOOR_ANIM_OPENING_4:
-                    doorHeight = (doorHeight * 9) / 16; // 56.25% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_OPENING_5:
-                    doorHeight = (doorHeight * 7) / 16; // 43.75% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_OPENING_6:
-                    doorHeight = (doorHeight * 5) / 16; // 31.25% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_1:
-                    doorHeight = (doorHeight * 5) / 16; // 31.25% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_2:
-                    doorHeight = (doorHeight * 7) / 16; // 43.75% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_3:
-                    doorHeight = (doorHeight * 9) / 16; // 56.25% of original height
-                    yOffset = 0;                        // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_4:
-                    doorHeight = (doorHeight * 11) / 16; // 68.75% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_5:
-                    doorHeight = (doorHeight * 13) / 16; // 81.25% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                case DOOR_ANIM_CLOSING_6:
-                    doorHeight = (doorHeight * 15) / 16; // 93.75% of original height
-                    yOffset = 0;                         // Start from top
-                    break;
-                }
-
-                // Draw the door
-                blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[doorW]->_setIndex],
-                                   pWallset->_tileset[doorW]->_x, pWallset->_tileset[doorW]->_y + yOffset,
-                                   pCurrentBuffer,
-                                   pWallset->_tileset[doorW]->_screen[0] + SOFFX, pWallset->_tileset[doorW]->_screen[1] + SOFFX + yOffset,
-                                   pWallset->_tileset[doorW]->_width, doorHeight,
-                                   (UBYTE *)pWallset->_mask[pWallset->_tileset[doorW]->_setIndex]->Planes[0]);
-                return 1; // Animation frame was drawn
-            }
+            pWallset->_tileset[doorW]->_type == MAZE_DOOR) {
             break;
         }
     }
+    
+    // If no door found at this location, exit
+    if (doorW >= pWallset->_tilesetCount) {
+        return 0;
+    }
+
+    // Check for active door animation
+    tDoorAnim *anim = doorAnimFind(pMaze, px + x, py + y);
+    if (anim) {
+        UBYTE doorHeight = pWallset->_tileset[doorW]->_height;
+        UBYTE yOffset = 0;
+
+        // Get height ratio based on frame number
+        UBYTE heightRatio;
+        if (anim->state == DOOR_ANIM_OPENING) {
+            // Opening: go from 16 to 0
+            heightRatio = 16 - ((anim->frame * 16) / DOOR_ANIM_FRAMES);
+        } else {
+            // Closing: go from 0 to 16
+            heightRatio = (anim->frame * 16) / DOOR_ANIM_FRAMES;
+        }
+        
+        if (heightRatio > 0) {  // Skip if door is fully open
+            doorHeight = (doorHeight * heightRatio) / 16;
+            
+            // Draw the door
+            blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[doorW]->_setIndex],
+                             pWallset->_tileset[doorW]->_x, pWallset->_tileset[doorW]->_y + yOffset,
+                             pCurrentBuffer,
+                             pWallset->_tileset[doorW]->_screen[0] + SOFFX, pWallset->_tileset[doorW]->_screen[1] + SOFFX + yOffset,
+                             pWallset->_tileset[doorW]->_width, doorHeight,
+                             (UBYTE *)pWallset->_mask[pWallset->_tileset[doorW]->_setIndex]->Planes[0]);
+            return 1; // Animation frame was drawn
+        }
+    }
+    
     return 0; // No animation frame was drawn
 }
 
