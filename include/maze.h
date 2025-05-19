@@ -27,14 +27,20 @@
 #define DOOR_ANIM_OPENING_1 1
 #define DOOR_ANIM_OPENING_2 2
 #define DOOR_ANIM_OPENING_3 3
-#define DOOR_ANIM_OPEN 4
-#define DOOR_ANIM_CLOSING_1 5
-#define DOOR_ANIM_CLOSING_2 6
-#define DOOR_ANIM_CLOSING_3 7
+#define DOOR_ANIM_OPENING_4 4
+#define DOOR_ANIM_OPENING_5 5
+#define DOOR_ANIM_OPENING_6 6
+#define DOOR_ANIM_OPEN 7
+#define DOOR_ANIM_CLOSING_1 8
+#define DOOR_ANIM_CLOSING_2 9
+#define DOOR_ANIM_CLOSING_3 10
+#define DOOR_ANIM_CLOSING_4 11
+#define DOOR_ANIM_CLOSING_5 12
+#define DOOR_ANIM_CLOSING_6 13
 
 typedef struct _doorAnim {
-    UBYTE x;
-    UBYTE y;
+    BYTE x;
+    BYTE y;
     UBYTE state;
     UBYTE timer;
     struct _doorAnim* next;
@@ -102,8 +108,8 @@ void mazeRemoveAllEvents(tMaze* maze);
 void mazeAddString(tMaze* maze, char* string, UWORD length);
 void mazeRemoveStrings(tMaze* maze);
 
-tDoorAnim* doorAnimCreate(UBYTE x, UBYTE y, UBYTE state);
+tDoorAnim* doorAnimCreate(BYTE x, BYTE y, UBYTE state);
 void doorAnimAdd(tMaze* maze, tDoorAnim* anim);
 void doorAnimRemove(tMaze* maze, tDoorAnim* anim);
 void doorAnimUpdate(tMaze* maze);
-tDoorAnim* doorAnimFind(tMaze* maze, UBYTE x, UBYTE y);
+tDoorAnim* doorAnimFind(tMaze* maze, BYTE x, BYTE y);

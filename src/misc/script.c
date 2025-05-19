@@ -275,7 +275,7 @@ void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE e
 }
 
 // Door animation functions
-tDoorAnim* doorAnimCreate(UBYTE x, UBYTE y, UBYTE state)
+tDoorAnim* doorAnimCreate(BYTE x, BYTE y, UBYTE state)
 {
     tDoorAnim* anim = (tDoorAnim*)memAllocFast(sizeof(tDoorAnim));
     if (anim) {
@@ -318,7 +318,7 @@ void doorAnimRemove(tMaze* maze, tDoorAnim* anim)
     }
 }
 
-tDoorAnim* doorAnimFind(tMaze* maze, UBYTE x, UBYTE y)
+tDoorAnim* doorAnimFind(tMaze* maze, BYTE x, BYTE y)
 {
     tDoorAnim* current = maze->_doorAnims;
     while (current) {
@@ -337,7 +337,7 @@ void doorAnimUpdate(tMaze* maze)
         tDoorAnim* next = current->next;
         
         // Update timer
-        if (++current->timer >= 5) { // Adjust timing as needed
+        if (++current->timer >= 1) { // Reduced from 5 to 2 frames for faster animation
             current->timer = 0;
             
             // Update animation state
@@ -349,8 +349,17 @@ void doorAnimUpdate(tMaze* maze)
                     current->state = DOOR_ANIM_OPENING_3;
                     break;
                 case DOOR_ANIM_OPENING_3:
+                    current->state = DOOR_ANIM_OPENING_4;
+                    break;
+                case DOOR_ANIM_OPENING_4:
+                    current->state = DOOR_ANIM_OPENING_5;
+                    break;
+                case DOOR_ANIM_OPENING_5:
+                    current->state = DOOR_ANIM_OPENING_6;
+                    break;
+                case DOOR_ANIM_OPENING_6:
                     current->state = DOOR_ANIM_OPEN;
-                    doorAnimRemove(maze, current); // Animation complete
+                    doorAnimRemove(maze, current);
                     break;
                 case DOOR_ANIM_CLOSING_1:
                     current->state = DOOR_ANIM_CLOSING_2;
@@ -359,8 +368,17 @@ void doorAnimUpdate(tMaze* maze)
                     current->state = DOOR_ANIM_CLOSING_3;
                     break;
                 case DOOR_ANIM_CLOSING_3:
+                    current->state = DOOR_ANIM_CLOSING_4;
+                    break;
+                case DOOR_ANIM_CLOSING_4:
+                    current->state = DOOR_ANIM_CLOSING_5;
+                    break;
+                case DOOR_ANIM_CLOSING_5:
+                    current->state = DOOR_ANIM_CLOSING_6;
+                    break;
+                case DOOR_ANIM_CLOSING_6:
                     current->state = DOOR_ANIM_NONE;
-                    doorAnimRemove(maze, current); // Animation complete
+                    doorAnimRemove(maze, current);
                     break;
             }
         }

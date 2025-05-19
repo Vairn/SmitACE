@@ -13,15 +13,6 @@ CMazePos g_mazePos[18];
 CMazeDr g_mazeDr[4];
 tBitMap *g_pMazeBitmap = NULL;
 
-// Pre-calculated view data
-typedef struct {
-    BYTE x, y;
-    UBYTE wmi;
-    tWallGfx* wall;
-} tViewData;
-
-static tViewData viewData[18];  // Pre-allocated for max 18 walls
-
 void clearViews(UBYTE *currentView, int startIndex, int endIndex)
 {
     for (int i = startIndex; i <= endIndex; i++)
@@ -137,6 +128,93 @@ void cleanUpView(UBYTE *pCurrentView)
         pCurrentView[0] = 0;
     }
 }
+
+UBYTE renderDoor(tWallset *pWallset, tMaze *pMaze, tBitMap *pCurrentBuffer,
+                 BYTE tx, BYTE ty, UBYTE px, UBYTE py, UBYTE x, UBYTE y)
+{
+    // Find the door graphics (MAZE_DOOR)
+    for (UBYTE doorW = 0; doorW < pWallset->_tilesetCount; ++doorW)
+    {
+        if (tx == pWallset->_tileset[doorW]->_location[0] &&
+            ty == pWallset->_tileset[doorW]->_location[1] &&
+            pWallset->_tileset[doorW]->_type != 0 &&
+            MAZE_DOOR == pWallset->_tileset[doorW]->_type)
+        {
+
+            // Check for active door animation
+            tDoorAnim *anim = doorAnimFind(pMaze, px + x, py + y);
+            if (anim)
+            {
+                UBYTE doorHeight = pWallset->_tileset[doorW]->_height;
+                UBYTE yOffset = 0;
+
+                switch (anim->state)
+                {
+                case DOOR_ANIM_OPENING_1:
+                    doorHeight = (doorHeight * 15) / 16; // 93.75% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                case DOOR_ANIM_OPENING_2:
+                    doorHeight = (doorHeight * 13) / 16; // 81.25% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                case DOOR_ANIM_OPENING_3:
+                    doorHeight = (doorHeight * 11) / 16; // 68.75% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                case DOOR_ANIM_OPENING_4:
+                    doorHeight = (doorHeight * 9) / 16; // 56.25% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_OPENING_5:
+                    doorHeight = (doorHeight * 7) / 16; // 43.75% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_OPENING_6:
+                    doorHeight = (doorHeight * 5) / 16; // 31.25% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_1:
+                    doorHeight = (doorHeight * 5) / 16; // 31.25% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_2:
+                    doorHeight = (doorHeight * 7) / 16; // 43.75% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_3:
+                    doorHeight = (doorHeight * 9) / 16; // 56.25% of original height
+                    yOffset = 0;                        // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_4:
+                    doorHeight = (doorHeight * 11) / 16; // 68.75% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_5:
+                    doorHeight = (doorHeight * 13) / 16; // 81.25% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                case DOOR_ANIM_CLOSING_6:
+                    doorHeight = (doorHeight * 15) / 16; // 93.75% of original height
+                    yOffset = 0;                         // Start from top
+                    break;
+                }
+
+                // Draw the door
+                blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[doorW]->_setIndex],
+                                   pWallset->_tileset[doorW]->_x, pWallset->_tileset[doorW]->_y + yOffset,
+                                   pCurrentBuffer,
+                                   pWallset->_tileset[doorW]->_screen[0] + SOFFX, pWallset->_tileset[doorW]->_screen[1] + SOFFX + yOffset,
+                                   pWallset->_tileset[doorW]->_width, doorHeight,
+                                   (UBYTE *)pWallset->_mask[pWallset->_tileset[doorW]->_setIndex]->Planes[0]);
+                return 1; // Animation frame was drawn
+            }
+            break;
+        }
+    }
+    return 0; // No animation frame was drawn
+}
+
 void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
 {
     static UBYTE currentView[18];
@@ -187,12 +265,12 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         UBYTE wmi = pMaze->_mazeData[mazeOffset];
     }
     WORD srcMapX = (px - 6) * 5;
-    WORD srcMapY = 1+(py - 3) * 5;
+    WORD srcMapY = 1 + (py - 3) * 5;
     WORD dstMapX = 182;
     WORD dstMapY = 194;
     WORD width = 60;
     WORD height = 32;
-    if(srcMapX < 0)
+    if (srcMapX < 0)
     {
         width = 60 + srcMapX;
         srcMapX = 0;
@@ -215,9 +293,9 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         srcMapY = 5 * pMaze->_height;
     }
     blitUnsafeCopy(g_pMazeBitmap, srcMapX, srcMapY, pCurrentBuffer, dstMapX, dstMapY, width, height, BLIT_COOKIE_MODE);
-    
+
     cleanUpView(currentView);
-    
+
     for (UBYTE i = 0; i < 18; i++)
     {
         BYTE x = 0;
@@ -243,67 +321,43 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
 
         UWORD mazeOffset = (py + y) * pMaze->_width + (px + x);
         UBYTE wmi = pMaze->_mazeData[mazeOffset];
-      
+
         BYTE tx = g_mazePos[i].xDelta;
         BYTE ty = g_mazePos[i].yDelta;
-    
+        UBYTE doorWMI = wmi;
+        UBYTE doorDrawn = FALSE;
+        if (wmi == MAZE_DOOR || wmi == MAZE_DOOR_OPEN || wmi == MAZE_DOOR_LOCKED)
+        {
+            if (renderDoor(pWallset, pMaze, pCurrentBuffer, tx, ty, px, py, x, y))
+            {
+                if (wmi == MAZE_DOOR || wmi == MAZE_DOOR_OPEN || wmi == MAZE_DOOR_LOCKED ){
+                    wmi = MAZE_DOOR_OPEN;
+                }
+            }
+        }
+
         for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if ((wmi == pWallset->_tileset[w]->_type) 
-                || (wmi == MAZE_DOOR_OPEN && pWallset->_tileset[w]->_type == 0)
-                || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0)
-                || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0))
+                if ((wmi == pWallset->_tileset[w]->_type) || (wmi == MAZE_DOOR_OPEN && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0))
                 {
-                    // Calculate door height based on animation state
                     UBYTE doorWidth = pWallset->_tileset[w]->_width;
                     UBYTE doorHeight = pWallset->_tileset[w]->_height;
                     UBYTE yOffset = 0;
-                    
-                    // Check for active door animation
-                    tDoorAnim* anim = doorAnimFind(pMaze, tx, ty);
-                    if (anim) {
-                        switch (anim->state) {
-                            case DOOR_ANIM_OPENING_1:
-                                doorHeight = (doorHeight * 3) / 4;  // 75% of original height
-                                yOffset = doorHeight / 4;  // Center the remaining door
-                                break;
-                            case DOOR_ANIM_OPENING_2:
-                                doorHeight = doorHeight / 2;  // 50% of original height
-                                yOffset = doorHeight / 2;  // Center the remaining door
-                                break;
-                            case DOOR_ANIM_OPENING_3:
-                                doorHeight = doorHeight / 4;  // 25% of original height
-                                yOffset = (doorHeight * 3) / 4;  // Center the remaining door
-                                break;
-                            case DOOR_ANIM_CLOSING_1:
-                                doorHeight = doorHeight / 4;  // 25% of original height
-                                yOffset = (doorHeight * 3) / 4;  // Center the remaining door
-                                break;
-                            case DOOR_ANIM_CLOSING_2:
-                                doorHeight = doorHeight / 2;  // 50% of original height
-                                yOffset = doorHeight / 2;  // Center the remaining door
-                                break;
-                            case DOOR_ANIM_CLOSING_3:
-                                doorHeight = (doorHeight * 3) / 4;  // 75% of original height
-                                yOffset = doorHeight / 4;  // Center the remaining door
-                                break;
-                        }
-                    }
-                    else if (wmi == MAZE_DOOR) {
-                        doorHeight = pWallset->_tileset[w]->_height;  // Full height for closed door
-                    }
-                    
-                    // Only draw if door has height
-                    if (doorHeight > 0) {
-                        blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
-                         pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y + yOffset,
-                         pCurrentBuffer,
-                         pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX + yOffset,
-                         doorWidth, doorHeight,
-                         (UBYTE *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
-                    }
+
+                    // Only apply door animation logic for actual doors
+
+                    // else {
+                    //  Draw regular wall
+
+                    blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
+                                       pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y,
+                                       pCurrentBuffer,
+                                       pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX,
+                                       doorWidth, doorHeight,
+                                       (UBYTE *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
+                    //}
                 }
             }
         }
