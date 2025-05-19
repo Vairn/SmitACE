@@ -256,51 +256,51 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
                 || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0)
                 || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0))
                 {
-                    // Calculate door width based on animation state
+                    // Calculate door height based on animation state
                     UBYTE doorWidth = pWallset->_tileset[w]->_width;
                     UBYTE doorHeight = pWallset->_tileset[w]->_height;
-                    UBYTE xOffset = 0;
+                    UBYTE yOffset = 0;
                     
                     // Check for active door animation
                     tDoorAnim* anim = doorAnimFind(pMaze, tx, ty);
                     if (anim) {
                         switch (anim->state) {
                             case DOOR_ANIM_OPENING_1:
-                                doorWidth = (doorWidth * 3) / 4;  // 75% of original width
-                                xOffset = doorWidth / 4;  // Center the remaining door
+                                doorHeight = (doorHeight * 3) / 4;  // 75% of original height
+                                yOffset = doorHeight / 4;  // Center the remaining door
                                 break;
                             case DOOR_ANIM_OPENING_2:
-                                doorWidth = doorWidth / 2;  // 50% of original width
-                                xOffset = doorWidth / 2;  // Center the remaining door
+                                doorHeight = doorHeight / 2;  // 50% of original height
+                                yOffset = doorHeight / 2;  // Center the remaining door
                                 break;
                             case DOOR_ANIM_OPENING_3:
-                                doorWidth = doorWidth / 4;  // 25% of original width
-                                xOffset = (doorWidth * 3) / 4;  // Center the remaining door
+                                doorHeight = doorHeight / 4;  // 25% of original height
+                                yOffset = (doorHeight * 3) / 4;  // Center the remaining door
                                 break;
                             case DOOR_ANIM_CLOSING_1:
-                                doorWidth = doorWidth / 4;  // 25% of original width
-                                xOffset = (doorWidth * 3) / 4;  // Center the remaining door
+                                doorHeight = doorHeight / 4;  // 25% of original height
+                                yOffset = (doorHeight * 3) / 4;  // Center the remaining door
                                 break;
                             case DOOR_ANIM_CLOSING_2:
-                                doorWidth = doorWidth / 2;  // 50% of original width
-                                xOffset = doorWidth / 2;  // Center the remaining door
+                                doorHeight = doorHeight / 2;  // 50% of original height
+                                yOffset = doorHeight / 2;  // Center the remaining door
                                 break;
                             case DOOR_ANIM_CLOSING_3:
-                                doorWidth = (doorWidth * 3) / 4;  // 75% of original width
-                                xOffset = doorWidth / 4;  // Center the remaining door
+                                doorHeight = (doorHeight * 3) / 4;  // 75% of original height
+                                yOffset = doorHeight / 4;  // Center the remaining door
                                 break;
                         }
                     }
                     else if (wmi == MAZE_DOOR) {
-                        doorWidth = pWallset->_tileset[w]->_width;  // Full width for closed door
+                        doorHeight = pWallset->_tileset[w]->_height;  // Full height for closed door
                     }
                     
-                    // Only draw if door has width
-                    if (doorWidth > 0) {
+                    // Only draw if door has height
+                    if (doorHeight > 0) {
                         blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
-                         pWallset->_tileset[w]->_x + xOffset, pWallset->_tileset[w]->_y,
+                         pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y + yOffset,
                          pCurrentBuffer,
-                         pWallset->_tileset[w]->_screen[0] + SOFFX + xOffset, pWallset->_tileset[w]->_screen[1] + SOFFX,
+                         pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX + yOffset,
                          doorWidth, doorHeight,
                          (UBYTE *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
                     }
