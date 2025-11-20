@@ -46,7 +46,8 @@
 		"title.h": "c",
 		"extview.h": "c",
 		"game_ui.h": "c",
-		"layer.h": "c"
+		"layer.h": "c",
+		"disk_file_private.h": "c"
 	},
 	"cmake.configureOnOpen": false,
 	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"

@@ -18,10 +18,12 @@ typedef enum _tFadeState {
 typedef void (*tCbFadeOnDone)(void);
 
 typedef struct _tFade {
-	tFadeState eState;
+	tFadeState eState;  // 4 bytes (enum, int-sized on 68000/68020)
 	UBYTE ubColorCount;
 	UBYTE ubCnt;
 	UBYTE ubCntEnd;
+	UBYTE _pad;   // Padding to ensure pointers are 4-byte aligned for 68020+
+	// eState (4) + 3 UBYTEs (3) = 7 bytes, need 1 byte to align to 8
 	UWORD* pPaletteRef;
 	tCbFadeOnDone cbOnDone;
 	tView *pView;

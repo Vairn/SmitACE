@@ -15,8 +15,9 @@ typedef struct _Layer Layer;
 
 typedef struct _Region
 {
-    tUwRect bounds;
-    mouse_pointer_t pointer;
+    tUwRect bounds;  // 8 bytes (4 UWORDs)
+    mouse_pointer_t pointer;  // 4 bytes (enum, int-sized on 68000/68020)
+    // Total: 12 bytes, already 4-byte aligned, no padding needed
     cbRegion cbOnIdle;
     cbRegion cbOnHovered;
     cbRegion cbOnUnhovered;

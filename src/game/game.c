@@ -129,21 +129,25 @@ void handleDoorClick(UBYTE x, UBYTE y)
     switch (cellType)
     {
     case MAZE_DOOR:
-        // Create door event to open door
-        UBYTE eventData[1] = {0};
-        tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 1, eventData);
-        handleEvent(pMaze, pEvent);
-        mazeRemoveEvent(pMaze, pEvent);
-        g_ubRedrawRequire = 2;
+        // Create door event to open door (uses event position, no data needed)
+        {
+            UBYTE eventData[1] = {0};
+            tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
+            handleEvent(pMaze, pEvent);
+            mazeRemoveEvent(pMaze, pEvent);
+            g_ubRedrawRequire = 2;
+        }
         break;
         
     case MAZE_DOOR_OPEN:
-        // Create door event to close door
-        eventData[0] = 0;
-        pEvent = mazeEventCreate(x, y, EVENT_CLOSEDOOR, 1, eventData);
-        handleEvent(pMaze, pEvent);
-        mazeRemoveEvent(pMaze, pEvent);
-        g_ubRedrawRequire = 2;
+        // Create door event to close door (uses event position, no data needed)
+        {
+            UBYTE eventData[1] = {0};
+            tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_CLOSEDOOR, 0, eventData);
+            handleEvent(pMaze, pEvent);
+            mazeRemoveEvent(pMaze, pEvent);
+            g_ubRedrawRequire = 2;
+        }
         break;
         
     case MAZE_DOOR_LOCKED:
@@ -312,6 +316,38 @@ static void gameGsLoop(void)
 
         // Update door animations
         doorAnimUpdate(g_pGameState->m_pCurrentMaze);
+
+        // Update monsters
+        for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
+            tMonster* monster = g_pGameState->m_pMonsterList->_monsters[i];
+            if (monster && monster->_state != MONSTER_STATE_DEAD) {
+                // Update monster state
+                monsterUpdate(monster, g_pGameState->m_pCurrentParty);
+
+                // Check for combat
+                if (monster->_state == MONSTER_STATE_AGGRESSIVE) {
+                    // If monster is in same cell as party, initiate combat
+                    if (monster->_partyPosX == g_pGameState->m_pCurrentParty->_PartyX &&
+                        monster->_partyPosY == g_pGameState->m_pCurrentParty->_PartyY) {
+                        // Monster attacks first character in party
+                        if (g_pGameState->m_pCurrentParty->_numCharacters > 0) {
+                            monsterAttack(monster, g_pGameState->m_pCurrentParty->_characters[0]);
+                            
+                            // Check if monster was defeated
+                            if (monster->_base._HP == 0) {
+                                monster->_state = MONSTER_STATE_DEAD;
+                                monsterDropLoot(monster);
+                                // Give experience to party
+                                for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
+                                    g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         g_ubRedrawRequire = 2;
 
         if (g_ubRedrawRequire)

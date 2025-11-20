@@ -305,7 +305,7 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if ((wmi == pWallset->_tileset[w]->_type) || (wmi == MAZE_DOOR_OPEN && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0))
+                if ((wmi == pWallset->_tileset[w]->_type) || (wmi == MAZE_DOOR_OPEN && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_EVENT_TRIGGER && pWallset->_tileset[w]->_type == 0))
                 {
                     UBYTE doorWidth = pWallset->_tileset[w]->_width;
                     UBYTE doorHeight = pWallset->_tileset[w]->_height;

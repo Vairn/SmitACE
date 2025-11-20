@@ -19,9 +19,11 @@ enum eRegionState
 
 typedef struct _RegionInternal
 {
-    RegionId id;
-    Region region;
-    enum eRegionState state;
+    RegionId id;  // 2 bytes (UWORD)
+    Region region;  // Size depends on Region structure
+    enum eRegionState state;  // 4 bytes (enum, int-sized on 68000/68020)
+    // If Region ends at odd address, state would be misaligned, but Region should be properly aligned
+    // After state (4 bytes), pointer needs 4-byte alignment - state is already 4-byte aligned
     struct _RegionInternal *pNext;
 } RegionInternal;
 

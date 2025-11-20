@@ -1,5 +1,3 @@
-#include "smite.h"
-
 #include <ace/generic/main.h>
 #include <ace/managers/key.h>
 #include <ace/managers/mouse.h>
@@ -17,36 +15,40 @@
 #ifdef AMIGA
 #include <clib/exec_protos.h> // AvailMem, AllocMem, FreeMem, etc.
 #endif
+
+#include "smite.h"
+
 tStateManager *g_pStateMachineGame;
 
 ULONG memGetFastSize(void) {
-	return AvailMem(MEMF_FAST);
+    return AvailMem(MEMF_FAST);
 }
 
 void genericCreate(void) {
 
-	warpmode(0);
-	g_pStateMachineGame = stateManagerCreate();
-	keyCreate();
+    //warpmode(0);
+    g_pStateMachineGame = stateManagerCreate();
+    keyCreate();
     mouseCreate(MOUSE_PORT_1);
-	ptplayerCreate(1);
-	stateChange(g_pStateMachineGame, &g_sStateGame);
-	systemUnuse();
-	//ULONG memFree = memGetFastSize();
-	//AllocateCommandList();
+    ptplayerCreate(1);
+    // Optional: Set initial state. If not set, stateProcess() will safely do nothing.
+     stateChange(g_pStateMachineGame, &g_sStateGame);
+    systemUnuse();
+    //ULONG memFree = memGetFastSize();
+    //AllocateCommandList();
 }
 
 void genericProcess(void) {
 
-	ptplayerProcess();
-	keyProcess();
+    ptplayerProcess();
+    keyProcess();
     mouseProcess();
-	stateProcess(g_pStateMachineGame);
+    stateProcess(g_pStateMachineGame);
 }
 
 void genericDestroy(void) {
-	ptplayerDestroy();
-	keyDestroy();
+    ptplayerDestroy();
+    keyDestroy();
     mouseDestroy();
-	stateManagerDestroy(g_pStateMachineGame);
+    stateManagerDestroy(g_pStateMachineGame);
 }

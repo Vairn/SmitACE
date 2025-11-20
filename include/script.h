@@ -1,3 +1,4 @@
+#pragma once
 #include "maze.h"
 /*
 ;  E6   ENCOUNTER
@@ -50,6 +51,18 @@
 ;  FE   <>
 ;  FF   =
 */
+
+// Script error types
+
+typedef enum {
+    SCRIPT_ERROR_NONE,
+    SCRIPT_ERROR_INVALID_EVENT,
+    SCRIPT_ERROR_STACK_OVERFLOW,
+    SCRIPT_ERROR_STACK_UNDERFLOW,
+    SCRIPT_ERROR_INVALID_GOTO,
+    SCRIPT_ERROR_MEMORY_ERROR
+} tScriptError;
+
 #define EVENT_SETWALL 0
 #define EVENT_SETFLOOR 1
 #define EVENT_SETCOL 2
@@ -117,5 +130,7 @@
 
 #define EVENT_BATTERY_CHARGER 221
 
+// Function declarations
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
 void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);
+void executeScript(tMaze *pMaze, UWORD startIndex);

@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.14.0)
 project(Smite LANGUAGES ASM C)
 
+# Force 68020 CPU target for this project
+set(M68K_CPU "68020" CACHE STRING "Target CPU model" FORCE)
+
 #set(CMAKE_C_STANDARD 17)
 file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 set(ACE_USE_AGA_FEATURES ON)
@@ -49,6 +52,10 @@ include_directories(${SDL2_INCLUDE_DIRS} include/)
 target_link_libraries(${SMITE_EXECUTABLE} ace )  
 target_compile_options(${SMITE_EXECUTABLE} PUBLIC -fomit-frame-pointer)
 
+# CRITICAL: Disable aggressive optimizations for 68020+ - known to cause crashes
+# -fno-optimize-sibling-calls: Prevents tail-call optimization that generates invalid branches
+target_compile_options(${SMITE_EXECUTABLE} PRIVATE  -fno-optimize-sibling-calls)
+target_compile_options(ace PRIVATE   -fno-optimize-sibling-calls)
 
 if(GAME_DEBUG)
 	target_compile_definitions(${SMITE_EXECUTABLE} PRIVATE GAME_DEBUG)
@@ -61,6 +68,19 @@ set(RES_DIR ${CMAKE_CURRENT_LIST_DIR}/res)
 set(DATA_DIR ${CMAKE_CURRENT_BINARY_DIR}/data)
 set(GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
+add_custom_command(
+    TARGET ${SMITE_EXECUTABLE}
+    PRE_BUILD
+    COMMAND ${CMAKE_COMMAND}
+    -DLANGUAGE:STRING="C"
+    -DHEADER_DIR:PATH="${CMAKE_SOURCE_DIR}/src"
+    -DCACHE_DIR:PATH="${CMAKE_SOURCE_DIR}"
+    -DCACHE_FILENAME:="BUILD_NUM"
+    -DHEADER_GUARD:STRING="__BUILD_NUMBER_H__INCLUDED__"
+    -DVERSION_MAJOR="${PROJECT_VERSION_MAJOR}"
+    -DVERSION_MINOR="${PROJECT_VERSION_MINOR}"
+    -P "${CMAKE_SOURCE_DIR}/build_number.cmake"
+)
 
 # Generating ZIP
 set(smite_ZIP_NAME "${CMAKE_PROJECT_NAME} ${VER_MAJOR}_${VER_MINOR}_${VER_FIX}")

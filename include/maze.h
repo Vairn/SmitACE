@@ -37,6 +37,7 @@ typedef struct _doorAnim {
     UBYTE state;      // DOOR_ANIM_OPENING or DOOR_ANIM_CLOSING
     UBYTE frame;      // Current frame (0 to DOOR_ANIM_FRAMES-1)
     UBYTE timer;      // Frame timer
+    UBYTE _pad;       // Padding to ensure pointer is 4-byte aligned for 68020+
     struct _doorAnim* next;
 } tDoorAnim;
 
@@ -44,8 +45,10 @@ typedef struct _mazeevent {
     UBYTE _x;
     UBYTE _y;
     UBYTE _eventType;
+    UBYTE _pad;       // Padding to ensure pointer is 4-byte aligned for 68020+
     UBYTE* _eventData;
     UBYTE _eventDataSize;
+    UBYTE _pad2[3];   // Padding to ensure pointers are 4-byte aligned for 68020+
     struct _mazeevent* _next;
     struct _mazeevent* _prev;
 } tMazeEvent;
