@@ -32,7 +32,7 @@
 		{
 			"type": "amiga",
 			"request": "launch",
-			"name": "Amiga 4000",
+		"name": "Amiga 4000",
 			"config": "A4000",
 			"program": "${workspaceFolder}/build/unknown/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",

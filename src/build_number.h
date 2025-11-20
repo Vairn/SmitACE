@@ -6,7 +6,7 @@
 #define VERSION_MAJOR 
 #define VERSION_MINOR 
 #define VERSION_PATCH 2511
-#define VERSION_BUILD 95
-#define VERSION_STRING "1.2.2511.95"
+#define VERSION_BUILD 156
+#define VERSION_STRING "1.2.2511.156"
 
 #endif
