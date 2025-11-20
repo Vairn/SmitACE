@@ -63,26 +63,25 @@ tMaze* mazeCreateDemoData(void)
     UBYTE eventData4[2] = {12, 15};
     createEventTrigger(pNewMaze, 12, 15, 10, 2, eventData4);
 
-    // Add battery chargers
-    // Battery charger 1 at (17,17)
-    UBYTE chargerData1[1] = {25};  // 25 units of power
-    createEventTrigger(pNewMaze, 17, 17, 5, 1, chargerData1);
-    
-    // Battery charger 2 at (20,0)
-    UBYTE chargerData2[1] = {25};  // 25 units of power
-    createEventTrigger(pNewMaze, 20, 0, 5, 1, chargerData2);
-    
-    // Battery charger 3 at (24,26)
-    UBYTE chargerData3[1] = {25};  // 25 units of power
-    createEventTrigger(pNewMaze, 24, 26, 5, 1, chargerData3);
-    
-    // Battery charger 4 at (26,27)
-    UBYTE chargerData4[1] = {25};  // 25 units of power
-    createEventTrigger(pNewMaze, 26, 27, 5, 1, chargerData4);
-    
-    // Battery charger 5 at (28,27)
-    UBYTE chargerData5[1] = {25};  // 25 units of power
-    createEventTrigger(pNewMaze, 28, 27, 5, 1, chargerData5);
+    // Automatically create battery charger events for all cells with value 5 (MAZE_EVENT_TRIGGER)
+    for (UBYTE y = 0; y < 32; y++)
+    {
+        for (UBYTE x = 0; x < 32; x++)
+        {
+            UWORD mazeOffset = y * 32 + x;
+            if (pNewMaze->_mazeData[mazeOffset] == MAZE_EVENT_TRIGGER)
+            {
+                // Check if there's already an event at this position (door unlocker)
+                tMazeEvent* pExistingEvent = mazeFindEventAtPosition(pNewMaze, x, y);
+                if (!pExistingEvent)
+                {
+                    // No existing event, create a battery charger event
+                    UBYTE chargerData[1] = {25};  // 25 units of power
+                    createEventTrigger(pNewMaze, x, y, EVENT_BATTERY_CHARGER, 1, chargerData);
+                }
+            }
+        }
+    }
     
     return pNewMaze;
 }
@@ -243,6 +242,17 @@ void mazeIterateEvents(tMaze* pMaze, void (*callback)(tMazeEvent*)) {
         (*callback)(event);
         event = event->_next;
     }
+}
+
+tMazeEvent* mazeFindEventAtPosition(tMaze* pMaze, UBYTE x, UBYTE y) {
+    tMazeEvent* event = pMaze->_events;
+    while (event != NULL) {
+        if (event->_x == x && event->_y == y) {
+            return event;
+        }
+        event = event->_next;
+    }
+    return NULL;
 }
 
 void mazeRemoveAllEvents(tMaze* pMaze) {

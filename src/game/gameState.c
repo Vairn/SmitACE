@@ -45,7 +45,7 @@ UBYTE InitNewGame()
     preFillPosDataNoFacing(g_mazePos);
     g_pGameState = (tGameState*)memAllocFastClear(sizeof(tGameState));
     g_pGameState->m_pCurrentParty = characterPartyCreate();
-    g_pGameState->m_pCurrentParty->_BatteryLevel = 1000;
+    g_pGameState->m_pCurrentParty->_BatteryLevel = 100;
     g_pGameState->m_pMonsterList = monsterListCreate();
     // Failed to Init New Game
     return 0;

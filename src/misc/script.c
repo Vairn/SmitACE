@@ -280,10 +280,14 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         
     case EVENT_BATTERY_CHARGER:
         if (pEvent->_eventDataSize > 0 && pEvent->_eventData[0] > 0) {
-            g_pGameState->m_pCurrentParty->_BatteryLevel++;
-            pEvent->_eventData[0]--;
-            logWrite("Battery recharged to %d, charger has %d units left\n", 
-                g_pGameState->m_pCurrentParty->_BatteryLevel, pEvent->_eventData[0]);
+            // Charge battery and decrement charger's charge level
+            // Clamp battery to max 100
+            if (g_pGameState->m_pCurrentParty->_BatteryLevel < 100) {
+                g_pGameState->m_pCurrentParty->_BatteryLevel += 1;
+                pEvent->_eventData[0]--;  // Decrement charger's remaining charge
+                logWrite("Battery recharged to %d, charger has %d units left\n", 
+                    g_pGameState->m_pCurrentParty->_BatteryLevel, pEvent->_eventData[0]);
+            }
         } else {
             logWrite("Battery charger at (%d,%d) is depleted\n", pEvent->_x, pEvent->_y);
         }
@@ -690,8 +694,9 @@ tDoorAnim* doorAnimFind(tMaze* maze, BYTE x, BYTE y)
     return NULL;
 }
 
-void doorAnimUpdate(tMaze* maze)
+UBYTE doorAnimUpdate(tMaze* maze)
 {
+    UBYTE animationsCompleted = 0;
     tDoorAnim* current = maze->_doorAnims;
     while (current) {
         tDoorAnim* next = current->next;
@@ -704,10 +709,37 @@ void doorAnimUpdate(tMaze* maze)
             if (++current->frame >= DOOR_ANIM_FRAMES) {
                 // Animation complete, remove it
                 doorAnimRemove(maze, current);
+                animationsCompleted = 1;
             }
         }
         
         current = next;
+    }
+    return animationsCompleted;
+}
+
+void updateBatteryChargers(tMaze* maze)
+{
+    static UBYTE s_ubRechargeTimer = 0;
+    
+    // Only recharge every 60 frames (about 1 second at 50fps)
+    if (++s_ubRechargeTimer < 60) {
+        return;
+    }
+    s_ubRechargeTimer = 0;
+    
+    // Iterate through all events and recharge battery chargers
+    tMazeEvent* event = maze->_events;
+    while (event != NULL) {
+        if (event->_eventType == EVENT_BATTERY_CHARGER) {
+            // If charger has event data and charge is below max (25), slowly recharge
+            if (event->_eventDataSize > 0 && event->_eventData[0] < 25) {
+                event->_eventData[0]++;  // Recharge by 1 unit
+                logWrite("Battery charger at (%d,%d) recharged to %d/25\n", 
+                    event->_x, event->_y, event->_eventData[0]);
+            }
+        }
+        event = event->_next;
     }
 }
 

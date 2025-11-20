@@ -2,6 +2,8 @@
 #include "game_ui.h"
 #include "game_ui_regions.h"
 #include "mouse_pointer.h"
+#include "screen.h"
+#include <ace/managers/blit.h>
 
 static Layer *s_gameUILayer = NULL;
 RegionId uiRegions[VIEWPORT_UI_GADGET_MAX];
@@ -70,6 +72,7 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegionClick cbOn
     gameAddRegion(65,192,22,38, GAME_UI_GADGET_BATTERY, MOUSE_EXAMINE);
     gameAddRegion(178,192,66,38, GAME_UI_GADGET_MAP, MOUSE_EXAMINE);
 
+    // Viewport - door interaction only
     gameAddRegion(1,1,248,160, VIEWPORT_UI_GADGET_DOOR, MOUSE_EXAMINE);
 
 
@@ -97,5 +100,38 @@ Layer *gameUIGetLayer()
 
 void gameUpdateBattery(UBYTE ubBattery)
 {
+    // Battery region is at (65,192) with size 22x38
+    // Draw a vertical bar from bottom up showing charge level (0-100)
+    tScreen* pScreen = ScreenGetActive();
+    if (!pScreen) return;
     
+    // Clamp battery to max 100
+    if (ubBattery > 100) {
+        ubBattery = 100;
+    }
+    
+    // Battery bar dimensions
+    const UWORD BATTERY_X = 65;
+    const UWORD BATTERY_Y = 192;
+    const UWORD BATTERY_WIDTH = 18;  // Leave 2px border on each side
+    const UWORD BATTERY_HEIGHT = 34; // Leave 2px border on top and bottom
+    
+    // Calculate filled height based on battery level (0-100)
+    UWORD filledHeight = (BATTERY_HEIGHT * ubBattery) / 100;
+    
+    // Clear the battery area (draw empty background)
+    blitRect(pScreen->_pBfr->pBack, BATTERY_X + 2, BATTERY_Y + 2, BATTERY_WIDTH, BATTERY_HEIGHT, 0);
+    
+    // Draw filled portion from bottom up
+    if (filledHeight > 0) {
+        UBYTE color = 2; // Green color for battery
+        if (ubBattery < 25) {
+            color = 4; // Red when low
+        } else if (ubBattery < 50) {
+            color = 3; // Yellow when medium
+        }
+        
+        UWORD barY = BATTERY_Y + 2 + BATTERY_HEIGHT - filledHeight;
+        blitRect(pScreen->_pBfr->pBack, BATTERY_X + 2, barY, BATTERY_WIDTH, filledHeight, color);
+    }
 }

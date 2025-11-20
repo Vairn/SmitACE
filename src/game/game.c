@@ -15,6 +15,7 @@
 
 #include "game_ui.h"
 #include "game_ui_regions.h"
+#include "script.h"
 ULONG seed = 1;
 #define SOFFX 5
 UBYTE s_lastMoveResult = 0;
@@ -41,6 +42,10 @@ UBYTE g_ubGameActive = 0;
 UBYTE g_ubRedrawRequire = 0;
 tBob g_pBob;
 tBitMap *temp = NULL;
+
+// Track which movement button is currently pressed (for repeat-while-held)
+static UBYTE s_ubPressedMovementButton = 0;
+static UBYTE s_ubPressedTurnButton = 0;
 
 void handleEquipmentClicked(WORD slotID)
 {
@@ -76,11 +81,41 @@ void TurnLeft()
     g_ubRedrawRequire = 2;
 }
 
+static void handleEventTrigger(void)
+{
+    if (s_lastMoveResult == 3) {
+        tMazeEvent* pEvent = mazeFindEventAtPosition(g_pGameState->m_pCurrentMaze, 
+            g_pGameState->m_pCurrentParty->_PartyX, g_pGameState->m_pCurrentParty->_PartyY);
+        if (pEvent) {
+            handleEvent(g_pGameState->m_pCurrentMaze, pEvent);
+        }
+    }
+}
+
+static void updateStandingOnEventTrigger(void)
+{
+    // Check if player is standing on an event trigger cell
+    UBYTE cellType = mazeGetCell(g_pGameState->m_pCurrentMaze, 
+        g_pGameState->m_pCurrentParty->_PartyX, 
+        g_pGameState->m_pCurrentParty->_PartyY);
+    
+    if (cellType == MAZE_EVENT_TRIGGER) {
+        tMazeEvent* pEvent = mazeFindEventAtPosition(g_pGameState->m_pCurrentMaze, 
+            g_pGameState->m_pCurrentParty->_PartyX, 
+            g_pGameState->m_pCurrentParty->_PartyY);
+        if (pEvent && pEvent->_eventType == EVENT_BATTERY_CHARGER) {
+            // Only charge if charger has charge left
+            handleEvent(g_pGameState->m_pCurrentMaze, pEvent);
+        }
+    }
+}
+
 void MoveRight()
 {
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 1;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    handleEventTrigger();
     g_ubRedrawRequire = 2;
 }
 
@@ -89,6 +124,7 @@ void MoveLeft()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 3;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    handleEventTrigger();
     g_ubRedrawRequire = 2;
 }
 
@@ -97,6 +133,7 @@ void MoveBackwards()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    handleEventTrigger();
     g_ubRedrawRequire = 2;
 }
 
@@ -105,6 +142,7 @@ void MoveForwards()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
+    handleEventTrigger();
     g_ubRedrawRequire = 2;
 }
 
@@ -164,28 +202,40 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
     switch (id)
     {
     case GAME_UI_GADGET_FORWARD:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedMovementButton = GAME_UI_GADGET_FORWARD;
             MoveForwards();
+        }
         break;
     case GAME_UI_GADGET_BACKWARD:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedMovementButton = GAME_UI_GADGET_BACKWARD;
             MoveBackwards();
+        }
         break;
     case GAME_UI_GADGET_LEFT:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedMovementButton = GAME_UI_GADGET_LEFT;
             MoveLeft();
+        }
         break;
     case GAME_UI_GADGET_RIGHT:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedMovementButton = GAME_UI_GADGET_RIGHT;
             MoveRight();
+        }
         break;
     case GAME_UI_GADGET_TURN_LEFT:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedTurnButton = GAME_UI_GADGET_TURN_LEFT;
             TurnLeft();
+        }
         break;
     case GAME_UI_GADGET_TURN_RIGHT:
-        if (ubLeft)
+        if (ubLeft) {
+            s_ubPressedTurnButton = GAME_UI_GADGET_TURN_RIGHT;
             TurnRight();
+        }
         break;
     case GAME_UI_GADGET_EQUIPMENT_1:
     case GAME_UI_GADGET_EQUIPMENT_2:
@@ -243,6 +293,15 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 
 void cbGameOnReleased(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
 {
+    UBYTE id = ((UBYTE)(ULONG)pRegion->context);
+    // Clear pressed movement button if this region was released
+    if (id == s_ubPressedMovementButton) {
+        s_ubPressedMovementButton = 0;
+    }
+    // Clear pressed turn button if this region was released
+    if (id == s_ubPressedTurnButton) {
+        s_ubPressedTurnButton = 0;
+    }
 }
 
 static void fadeCompleteNoBat(void)
@@ -315,7 +374,18 @@ static void gameGsLoop(void)
         }
 
         // Update door animations
-        doorAnimUpdate(g_pGameState->m_pCurrentMaze);
+        UBYTE animationsCompleted = doorAnimUpdate(g_pGameState->m_pCurrentMaze);
+        
+        // If there are active door animations or one just completed, we need to redraw
+        if (g_pGameState->m_pCurrentMaze->_doorAnims != NULL || animationsCompleted) {
+            g_ubRedrawRequire = 2;
+        }
+        
+        // Update battery chargers (slowly recharge over time)
+        updateBatteryChargers(g_pGameState->m_pCurrentMaze);
+        
+        // Check if standing on event triggers (e.g., battery chargers)
+        updateStandingOnEventTrigger();
 
         // Update monsters
         for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
@@ -348,8 +418,6 @@ static void gameGsLoop(void)
             }
         }
 
-        g_ubRedrawRequire = 2;
-
         if (g_ubRedrawRequire)
         {
             drawView(g_pGameState, pScreen->_pBfr->pBack);
@@ -357,6 +425,86 @@ static void gameGsLoop(void)
         }
 
         gameUpdateBattery(g_pGameState->m_pCurrentParty->_BatteryLevel);
+        
+        // Process mouse multiple times per frame for better responsiveness
+        mouseProcess();
+        mouseProcess();
+        
+        // Check if a movement button is still pressed (repeat-while-held, like EOB/DM)
+        if (s_ubPressedMovementButton != 0 && mouseCheck(MOUSE_PORT_1, MOUSE_LMB)) {
+            UWORD uwMouseX = mouseGetX(MOUSE_PORT_1);
+            UWORD uwMouseY = mouseGetY(MOUSE_PORT_1);
+            UBYTE ubOverButton = 0;
+            
+            // Check if mouse is still over the pressed button (using known button coordinates)
+            switch (s_ubPressedMovementButton) {
+            case GAME_UI_GADGET_FORWARD:
+                ubOverButton = (uwMouseX >= 25 && uwMouseX < 43 && uwMouseY >= 192 && uwMouseY < 210);
+                break;
+            case GAME_UI_GADGET_BACKWARD:
+                ubOverButton = (uwMouseX >= 25 && uwMouseX < 43 && uwMouseY >= 212 && uwMouseY < 230);
+                break;
+            case GAME_UI_GADGET_LEFT:
+                ubOverButton = (uwMouseX >= 5 && uwMouseX < 23 && uwMouseY >= 212 && uwMouseY < 230);
+                break;
+            case GAME_UI_GADGET_RIGHT:
+                ubOverButton = (uwMouseX >= 45 && uwMouseX < 63 && uwMouseY >= 212 && uwMouseY < 230);
+                break;
+            }
+            
+            if (ubOverButton) {
+                // Button still pressed, trigger movement each frame
+                switch (s_ubPressedMovementButton) {
+                case GAME_UI_GADGET_FORWARD:
+                    MoveForwards();
+                    break;
+                case GAME_UI_GADGET_BACKWARD:
+                    MoveBackwards();
+                    break;
+                case GAME_UI_GADGET_LEFT:
+                    MoveLeft();
+                    break;
+                case GAME_UI_GADGET_RIGHT:
+                    MoveRight();
+                    break;
+                }
+            } else {
+                // Mouse moved away from button, clear pressed state
+                s_ubPressedMovementButton = 0;
+            }
+        }
+        
+        // Check if a turn button is still pressed (repeat-while-held)
+        if (s_ubPressedTurnButton != 0 && mouseCheck(MOUSE_PORT_1, MOUSE_LMB)) {
+            UWORD uwMouseX = mouseGetX(MOUSE_PORT_1);
+            UWORD uwMouseY = mouseGetY(MOUSE_PORT_1);
+            UBYTE ubOverButton = 0;
+            
+            // Check if mouse is still over the pressed button
+            switch (s_ubPressedTurnButton) {
+            case GAME_UI_GADGET_TURN_LEFT:
+                ubOverButton = (uwMouseX >= 5 && uwMouseX < 23 && uwMouseY >= 192 && uwMouseY < 210);
+                break;
+            case GAME_UI_GADGET_TURN_RIGHT:
+                ubOverButton = (uwMouseX >= 45 && uwMouseX < 63 && uwMouseY >= 192 && uwMouseY < 210);
+                break;
+            }
+            
+            if (ubOverButton) {
+                // Button still pressed, trigger turn each frame
+                switch (s_ubPressedTurnButton) {
+                case GAME_UI_GADGET_TURN_LEFT:
+                    TurnLeft();
+                    break;
+                case GAME_UI_GADGET_TURN_RIGHT:
+                    TurnRight();
+                    break;
+                }
+            } else {
+                // Mouse moved away from button, clear pressed state
+                s_ubPressedTurnButton = 0;
+            }
+        }
         
         if (keyCheck(KEY_ESCAPE))
             gameExit();

@@ -2,6 +2,7 @@
 #include "maze.h"
 #include "wallset.h"
 #include "GameState.h"
+#include "script.h"
 
 #include <ace/managers/blit.h>
 #define SOFFX 5
@@ -297,6 +298,28 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
             {
                 if (wmi == MAZE_DOOR || wmi == MAZE_DOOR_OPEN || wmi == MAZE_DOOR_LOCKED ){
                     wmi = MAZE_DOOR_OPEN;
+                }
+            }
+        }
+        
+        // Check if this cell is a charger (maze data = 5 = MAZE_EVENT_TRIGGER)
+        // and render indicator on floor if it's a battery charger event
+        if (wmi == MAZE_EVENT_TRIGGER)  // MAZE_EVENT_TRIGGER is 5
+        {
+            tMazeEvent* pEvent = mazeFindEventAtPosition(pMaze, px + x, py + y);
+            if (pEvent && pEvent->_eventType == EVENT_BATTERY_CHARGER)
+            {
+                // Draw charger indicator on the floor - find floor rendering position
+                for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
+                {
+                    if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1] && pWallset->_tileset[w]->_type == 0)
+                    {
+                        // This is a floor tile - draw charger indicator in center
+                        WORD centerX = pWallset->_tileset[w]->_screen[0] + SOFFX + (pWallset->_tileset[w]->_width / 2) - 4;
+                        WORD centerY = pWallset->_tileset[w]->_screen[1] + SOFFX + pWallset->_tileset[w]->_height - 12;
+                        blitRect(pCurrentBuffer, centerX, centerY, 8, 8, 2); // Green square indicator
+                        break;
+                    }
                 }
             }
         }

@@ -98,6 +98,8 @@ void mazeRemoveEvent(tMaze* maze, tMazeEvent* event);
 
 void mazeIterateEvents(tMaze* maze, void (*callback)(tMazeEvent*));
 
+tMazeEvent* mazeFindEventAtPosition(tMaze* maze, UBYTE x, UBYTE y);
+
 void mazeDelete(tMaze* maze);
 
 void mazeRemoveAllEvents(tMaze* maze);
@@ -108,5 +110,5 @@ void mazeRemoveStrings(tMaze* maze);
 tDoorAnim* doorAnimCreate(BYTE x, BYTE y, UBYTE state);
 void doorAnimAdd(tMaze* maze, tDoorAnim* anim);
 void doorAnimRemove(tMaze* maze, tDoorAnim* anim);
-void doorAnimUpdate(tMaze* maze);
+UBYTE doorAnimUpdate(tMaze* maze);  // Returns 1 if any animations completed
 tDoorAnim* doorAnimFind(tMaze* maze, BYTE x, BYTE y);

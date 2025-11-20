@@ -134,3 +134,4 @@ typedef enum {
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
 void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);
 void executeScript(tMaze *pMaze, UWORD startIndex);
+void updateBatteryChargers(tMaze* maze);
