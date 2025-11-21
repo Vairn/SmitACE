@@ -5,6 +5,7 @@
 #include <ace/managers/joy.h>
 #include <ace/managers/blit.h>
 #include <ace/utils/sprite.h>
+#include <ace/utils/palette.h>
 #include <ace/managers/bob.h>
 
 #include "gameState.h"
@@ -74,7 +75,7 @@ static UBYTE s_ubMessageCount = 0;
 
 // Viewport message (only one at a time)
 static tTextBitMap *s_pViewportMessageBitmap = NULL;
-static char s_szViewportMessage[256];
+static char s_szViewportMessage[512];  // Increased from 256 to support longer messages
 static UBYTE s_ubViewportMessageActive = 0;
 static UBYTE s_ubViewportMessageColor = 7;  // Default color (white)
 
@@ -123,8 +124,8 @@ static void addMessage(const char *szMessage, eMessageType eType, UBYTE ubColor)
             s_pViewportMultiColorText = NULL;
         }
         
-        strncpy(s_szViewportMessage, szMessage, 255);
-        s_szViewportMessage[255] = '\0';
+        strncpy(s_szViewportMessage, szMessage, 511);
+        s_szViewportMessage[511] = '\0';
         
         // Create multi-color text (handles both single-color and multi-color)
         // Max width 220px for wrapping
@@ -497,13 +498,68 @@ static void gameGsCreate(void)
     g_pGameState->m_pCurrentParty->_PartyY = 2;
     g_pGameState->m_pCurrentParty->_PartyFacing = 0;
 
+    // Load UI palette (colors 0-31) for the playfield frame and UI elements
+    paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 32);
+    
     pWallset = wallsetLoad("data/factory2/factory2.wll");
     g_pGameState->m_pCurrentWallset = pWallset;
 
-    for (int p = 0; p < 256; p++)
+    // Load wallset palette into colors 32-63 to avoid conflict with UI colors (0-31)
+    // The wallset graphics will be drawn with bitplane 5 set, shifting them to 32-63 range
+    ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
+    for (int p = 0; p < 32; p++)
     {
-        ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
-        pPalRef[p] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
+        pPalRef[p + 32] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
+    }
+    
+    // Load text palette into colors 64-95 for viewport text
+    // 32 colors optimized for text readability on dark backgrounds
+    static const ULONG s_aTextPalette[32] = {
+        // 0-7: Grayscale and dark colors
+        0x000000,  // 0: Pure black
+        0x1A1A1A,  // 1: Very dark gray
+        0x333333,  // 2: Dark gray
+        0x4D4D4D,  // 3: Medium dark gray
+        0x666666,  // 4: Medium gray
+        0x808080,  // 5: Medium light gray
+        0x999999,  // 6: Light gray
+        0xB3B3B3,  // 7: Very light gray
+        
+        // 8-15: Bright colors for emphasis
+        0xFFFFFF,  // 8: Pure white (main text)
+        0xFF0000,  // 9: Bright red (warnings/errors)
+        0x00FF00,  // 10: Bright green (success/positive)
+        0x0000FF,  // 11: Bright blue (info)
+        0xFFFF00,  // 12: Bright yellow (caution)
+        0xFF00FF,  // 13: Bright magenta
+        0x00FFFF,  // 14: Bright cyan
+        0xFF8000,  // 15: Bright orange
+        
+        // 16-23: Softer, readable colors
+        0xE0E0E0,  // 16: Off-white (secondary text)
+        0xC0C0C0,  // 17: Silver
+        0xFF4040,  // 18: Light red
+        0x40FF40,  // 19: Light green
+        0x4040FF,  // 20: Light blue
+        0xFFFF40,  // 21: Light yellow
+        0xFF40FF,  // 22: Light magenta
+        0x40FFFF,  // 23: Light cyan
+        
+        // 24-31: Muted colors and variations
+        0xCCCCCC,  // 24: Light gray
+        0xAA0000,  // 25: Dark red
+        0x00AA00,  // 26: Dark green
+        0x0000AA,  // 27: Dark blue
+        0xAAAA00,  // 28: Dark yellow/olive
+        0xAA00AA,  // 29: Dark magenta/purple
+        0x00AAAA,  // 30: Dark cyan/teal
+        0xFFAA00   // 31: Gold/amber
+    };
+    
+    // Copy text palette to colors 64-95
+    for (int p = 0; p < 32; p++)
+    {
+        pPalRef[p + 64] = s_aTextPalette[p];
     }
     
     pMod = ptplayerModCreateFromPath("data/suspense.mod");
@@ -655,6 +711,10 @@ static void gameGsLoop(void)
         // Clear text field area before drawing (y=234, height=21, width=246, x=2)
         blitRect(pScreen->_pBfr->pBack, 2, 234, 246, 21, 0);
         
+        // Set bitplane 6 in text field area so battery text can use text palette colors (64-95)
+        // Color 64 = bitplane 6 only
+        blitRect(pScreen->_pBfr->pBack, 2, 234, 246, 21, 64);
+        
         // Draw messages in text field at bottom (y=234, height=21, width=246)
         // Only show small messages, latest at bottom
         if (s_ubTextRendererInitialized && s_ubMessageCount > 0) {
@@ -708,15 +768,15 @@ static void gameGsLoop(void)
                 } else if (s_pMessageBitmaps[msgIdx]) {
                     // Draw single-color message
                     // Determine color
-                    UBYTE ubColor = 1;  // Default color
+                    UBYTE ubColor = 65;  // Default color (64+1, using text palette)
                     if (s_ubBatteryHovered && s_ubLastBatteryLevel != 255) {
                         UBYTE ubBatteryLevel = s_ubLastBatteryLevel;
                         if (ubBatteryLevel < 25) {
-                            ubColor = 4;  // Red when low
+                            ubColor = 73;  // Red when low (64+9, color 9 from text palette)
                         } else if (ubBatteryLevel < 50) {
-                            ubColor = 3;  // Yellow when medium
+                            ubColor = 79;  // Yellow when medium (64+15, color 15 from text palette)
                         } else {
-                            ubColor = 2;  // Green when high
+                            ubColor = 74;  // Green when high (64+10, color 10 from text palette)
                         }
                     }
                     
@@ -766,7 +826,11 @@ static void gameGsLoop(void)
                 // Draw background rectangle (color 0 = black/dark background)
                 blitRect(pScreen->_pBfr->pBack, uwBgX, uwBgY, uwBgWidth, uwBgHeight, 0);
                 
-                // Draw each segment with its color
+                // Clear bitplane 5 and set bitplane 6 for text area (text uses colors 64-95)
+                // Color 64 = bitplane 6 only (0100000 binary), which clears bitplane 5
+                blitRect(pScreen->_pBfr->pBack, uwBgX, uwBgY, uwBgWidth, uwBgHeight, 64);
+                
+                // Draw each segment with its color (64-95 range)
                 for (UBYTE i = 0; i < s_pViewportMultiColorText->ubSegmentCount; i++) {
                     if (s_pViewportMultiColorText->aSegments[i].pBitmap) {
                         UWORD uwTextX = uwBgX + uwTextOffsetX + s_pViewportMultiColorText->aSegments[i].uwX;
@@ -774,10 +838,11 @@ static void gameGsLoop(void)
                         
                         // Only draw if segment is within the 220px width limit
                         if (s_pViewportMultiColorText->aSegments[i].uwX + s_pViewportMultiColorText->aSegments[i].pBitmap->uwActualWidth <= 220) {
+                            // Use colors 64-95 for text (64 + original color 0-31)
                             fontDrawTextBitMap(pScreen->_pBfr->pBack, 
                                 s_pViewportMultiColorText->aSegments[i].pBitmap, 
                                 uwTextX, uwTextY, 
-                                s_pViewportMultiColorText->aSegments[i].ubColor, 
+                                s_pViewportMultiColorText->aSegments[i].ubColor + 64, 
                                 FONT_COOKIE);
                         }
                     }
@@ -803,8 +868,12 @@ static void gameGsLoop(void)
                 // Draw background rectangle (color 0 = black/dark background)
                 blitRect(pScreen->_pBfr->pBack, uwBgX, uwBgY, uwBgWidth, uwBgHeight, 0);
                 
-                // Draw text on top of background with stored color
-                fontDrawTextBitMap(pScreen->_pBfr->pBack, s_pViewportMessageBitmap, uwTextX, uwTextY, s_ubViewportMessageColor, FONT_COOKIE);
+                // Clear bitplane 5 and set bitplane 6 for text area (text uses colors 64-95)
+                // Color 64 = bitplane 6 only (0100000 binary), which clears bitplane 5
+                blitRect(pScreen->_pBfr->pBack, uwBgX, uwBgY, uwBgWidth, uwBgHeight, 64);
+                
+                // Draw text on top of background with stored color (64-95 range)
+                fontDrawTextBitMap(pScreen->_pBfr->pBack, s_pViewportMessageBitmap, uwTextX, uwTextY, s_ubViewportMessageColor + 64, FONT_COOKIE);
             }
         }
         
@@ -959,14 +1028,19 @@ static void gameGsLoop(void)
             s_ubF3Pressed = 0;
         }
         
-        // F4 - Test rainbow message (all 16 colors)
+        // F4 - Test rainbow message (all 32 colors)
         static UBYTE s_ubF4Pressed = 0;
         if (keyCheck(KEY_F4)) {
             if (!s_ubF4Pressed) {
                 s_ubF4Pressed = 1;
                 if (s_ubTextRendererInitialized) {
-                    // Rainbow message showing all 16 colors
-                    addMessage("{c:0}0 {c:1}1 {c:2}2 {c:3}3 {c:4}4 {c:5}5 {c:6}6 {c:7}7\n{c:8}8 {c:9}9 {c:10}10 {c:11}11 {c:12}12 {c:13}13 {c:14}14 {c:15}15", MESSAGE_TYPE_VIEWPORT, 7);
+                    // Show all 32 colors with numbers and descriptive words
+                    addMessage(
+                        "{c:0}0:Black {c:1}1:DarkGray {c:2}2:Gray {c:3}3:MedGray {c:4}4:LightGray {c:5}5:Silver {c:6}6:PaleGray {c:7}7:OffWhite\n"
+                        "{c:8}8:White {c:9}9:Red {c:10}10:Green {c:11}11:Blue {c:12}12:Yellow {c:13}13:Magenta {c:14}14:Cyan {c:15}15:Orange\n"
+                        "{c:16}16:OffWhite {c:17}17:Silver {c:18}18:LightRed {c:19}19:LightGreen {c:20}20:LightBlue {c:21}21:LightYellow {c:22}22:LightMagenta {c:23}23:LightCyan\n"
+                        "{c:24}24:LightGray {c:25}25:DarkRed {c:26}26:DarkGreen {c:27}27:DarkBlue {c:28}28:Olive {c:29}29:Purple {c:30}30:Teal {c:31}31:Gold",
+                        MESSAGE_TYPE_VIEWPORT, 8);
                 }
             }
         } else {

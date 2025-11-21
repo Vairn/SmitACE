@@ -122,13 +122,17 @@ void gameUpdateBattery(UBYTE ubBattery)
     // Clear the battery area (draw empty background)
     blitRect(pScreen->_pBfr->pBack, BATTERY_X + 2, BATTERY_Y + 2, BATTERY_WIDTH, BATTERY_HEIGHT, 0);
     
+    // Set bitplane 6 in battery area so it can use text palette colors (64-95)
+    // Color 64 = bitplane 6 only
+    blitRect(pScreen->_pBfr->pBack, BATTERY_X + 2, BATTERY_Y + 2, BATTERY_WIDTH, BATTERY_HEIGHT, 64);
+    
     // Draw filled portion from bottom up
     if (filledHeight > 0) {
-        UBYTE color = 2; // Green color for battery
+        UBYTE color = 74; // Green color for battery (64+10, color 10 from text palette)
         if (ubBattery < 25) {
-            color = 4; // Red when low
+            color = 73; // Red when low (64+9, color 9 from text palette)
         } else if (ubBattery < 50) {
-            color = 3; // Yellow when medium
+            color = 79; // Yellow/Orange when medium (64+15, color 15 from text palette)
         }
         
         UWORD barY = BATTERY_Y + 2 + BATTERY_HEIGHT - filledHeight;

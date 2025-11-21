@@ -187,6 +187,12 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
     memset(currentView, 0, sizeof(currentView));
     UBYTE px, py;
     blitRect(pCurrentBuffer, SOFFX, SOFFX, 240, 180, 0);
+    
+    // Fill bitplane 5 in the viewport area so walls use colors 32-63 instead of 0-31
+    // This avoids conflict with UI colors (0-31)
+    // Using color 32 (binary 100000) sets only bitplane 5
+    blitRect(pCurrentBuffer, SOFFX, SOFFX, 240, 180, 32);
+    
     px = pGameState->m_pCurrentParty->_PartyX;
     py = pGameState->m_pCurrentParty->_PartyY;
     UBYTE facing = pGameState->m_pCurrentParty->_PartyFacing;
@@ -317,7 +323,7 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
                         // This is a floor tile - draw charger indicator in center
                         WORD centerX = pWallset->_tileset[w]->_screen[0] + SOFFX + (pWallset->_tileset[w]->_width / 2) - 4;
                         WORD centerY = pWallset->_tileset[w]->_screen[1] + SOFFX + pWallset->_tileset[w]->_height - 12;
-                        blitRect(pCurrentBuffer, centerX, centerY, 8, 8, 2); // Green square indicator
+                        blitRect(pCurrentBuffer, centerX, centerY, 8, 8, 34); // Green square indicator (32+2, using wallset color range)
                         break;
                     }
                 }

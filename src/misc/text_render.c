@@ -270,6 +270,8 @@ tTextBitMap *textRendererCreateText(
 
 /**
  * @brief Creates multi-color text from text with color markup {c:N}
+ * @note Color values 0-31 map to text palette colors 64-95 (bitplane 6 offset)
+ *       Use {c:0} through {c:31} to access all 32 text palette colors
  */
 tMultiColorText *textRendererCreateMultiColorText(
     tTextRenderer *pRenderer,
@@ -279,6 +281,11 @@ tMultiColorText *textRendererCreateMultiColorText(
 ) {
     if (!pRenderer || !szText || !pRenderer->pFont) {
         return NULL;
+    }
+    
+    // Clamp default color to 0-31 range (32 colors in text palette)
+    if (ubDefaultColor > 31) {
+        ubDefaultColor = 31;
     }
     
     systemUse();
@@ -302,9 +309,9 @@ tMultiColorText *textRendererCreateMultiColorText(
     }
     
     // Copy text (preserve newlines for line breaks)
-    char szWorkingText[256];
+    char szWorkingText[512];  // Increased from 256 to support longer messages
     UWORD uwTextLen = strlen(szText);
-    if (uwTextLen >= 256) uwTextLen = 255;
+    if (uwTextLen >= 512) uwTextLen = 511;
     memcpy(szWorkingText, szText, uwTextLen);
     szWorkingText[uwTextLen] = '\0';
     
@@ -336,7 +343,7 @@ tMultiColorText *textRendererCreateMultiColorText(
     } else {
         // Parse color markup and create segments
         UBYTE ubCurrentColor = ubDefaultColor;
-        char szSegment[256];
+        char szSegment[512];  // Increased from 256 to support longer segments
         UWORD uwSegmentStart = 0;
         
         for (UWORD i = 0; i < uwTextLen && pResult->ubSegmentCount < MAX_COLOR_SEGMENTS; i++) {
@@ -349,6 +356,10 @@ tMultiColorText *textRendererCreateMultiColorText(
                        szWorkingText[uwColorEnd] <= '9') {
                     ubNewColor = ubNewColor * 10 + (szWorkingText[uwColorEnd] - '0');
                     uwColorEnd++;
+                }
+                // Clamp color to 0-31 range (32 colors in text palette)
+                if (ubNewColor > 31) {
+                    ubNewColor = 31;
                 }
                 if (uwColorEnd < uwTextLen && szWorkingText[uwColorEnd] == '}') {
                     // Save segment before color change (may contain newlines)
@@ -368,7 +379,7 @@ tMultiColorText *textRendererCreateMultiColorText(
                             }
                             
                             UWORD uwSegLen = uwNewlinePos - uwSegStart;
-                            if (uwSegLen > 0 && uwSegLen < 255) {
+                            if (uwSegLen > 0 && uwSegLen < 511) {
                                 memcpy(szSegment, szWorkingText + uwSegStart, uwSegLen);
                                 szSegment[uwSegLen] = '\0';
                                 
