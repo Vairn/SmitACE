@@ -562,6 +562,13 @@ static void gameGsCreate(void)
         pPalRef[p + 64] = s_aTextPalette[p];
     }
     
+#ifdef ACE_USE_AGA_FEATURES
+    // Set sprite palette banks to use text palette (bank 4 = colors 64-79)
+    // Mouse pointer uses channels 0 (even) and 1 (odd), both set to bank 4
+    spriteSetEvenColourPaletteBank(4);  // Channel 0 uses colors 64-79
+    spriteSetOddColourPaletteBank(4);   // Channel 1 uses colors 64-79
+#endif
+    
     pMod = ptplayerModCreateFromPath("data/suspense.mod");
     ptplayerLoadMod(pMod, NULL, 0);
     ptplayerSetMasterVolume(64);
