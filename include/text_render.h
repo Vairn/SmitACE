@@ -57,8 +57,9 @@ tTextBitMap *textRendererCreateText(
 
 /**
  * @brief Color segment for multi-color text
+ * @note Increased to 64 to support all 32 text palette colors and more
  */
-#define MAX_COLOR_SEGMENTS 16
+#define MAX_COLOR_SEGMENTS 32
 typedef struct {
     tTextBitMap *pBitmap;  ///< Text bitmap for this segment
     UBYTE ubColor;          ///< Color index for this segment
@@ -79,11 +80,13 @@ typedef struct {
 /**
  * @brief Creates multi-color text from text with color markup {c:N}
  * @param pRenderer Text renderer instance
- * @param szText Text with optional color markup (e.g., "{c:2}green{c:7} white")
- * @param ubDefaultColor Default color if no markup found
+ * @param szText Text with optional color markup (e.g., "{c:8}white{c:9}red text")
+ * @param ubDefaultColor Default color if no markup found (0-31, maps to text palette colors 64-95)
  * @param uwMaxWidth Maximum width before wrapping to new line (0 = no wrapping)
  * @return Pointer to multi-color text structure, or NULL on failure
  * @note Caller must call textRendererDestroyMultiColorText() to free
+ * @note Color values 0-31 map to text palette colors 64-95 (bitplane 6 offset)
+ *       All 32 colors from the text palette are available via {c:0} through {c:31}
  */
 tMultiColorText *textRendererCreateMultiColorText(
     tTextRenderer *pRenderer,
