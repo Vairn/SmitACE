@@ -3,6 +3,10 @@
 #include "character.h"
 #include "Maze.h"
 
+// Forward declaration
+struct _tInventory;
+typedef struct _tInventory tInventory;
+
 // Monster constants
 #define MAX_MONSTERS 64
 
@@ -46,7 +50,7 @@ void monsterListDestroy(tMonsterList* monsterList);
 // Monster behavior
 void monsterUpdate(tMonster* monster, tCharacterParty* party);
 void monsterAttack(tMonster* monster, tCharacter* target);
-void monsterDropLoot(tMonster* monster);
+void monsterDropLoot(tMonster* monster, tInventory* pInventory);
 
 // Monster placement
 void monsterPlaceInMaze(tMaze* maze, tMonster* monster, UBYTE x, UBYTE y);

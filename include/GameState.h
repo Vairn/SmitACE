@@ -4,6 +4,10 @@
 #include "character.h"
 #include "script.h"
 #include "monster.h"
+#include "inventory.h"
+#include "wallbutton.h"
+#include "doorbutton.h"
+#include "doorlock.h"
 
 #include <ace/managers/state.h>
 
@@ -31,6 +35,10 @@ typedef struct _tGameState
     tWallset *m_pCurrentWallset;
     tCharacterParty *m_pCurrentParty;
     tMonsterList *m_pMonsterList;  // List of monsters in current level
+    tInventory *m_pInventory;      // Party inventory
+    tWallButtonList m_wallButtons; // Wall buttons in current level
+    tDoorButtonList m_doorButtons; // Door buttons in current level
+    tDoorLockList m_doorLocks;     // Door locks in current level
     tScriptState _scriptState;
 } tGameState;
 

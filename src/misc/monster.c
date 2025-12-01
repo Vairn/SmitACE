@@ -1,6 +1,15 @@
 #include "monster.h"
+#include "inventory.h"
 #include <ace/managers/memory.h>
 #include <ace/managers/system.h>
+
+// Simple random number generator (LCG)
+static ULONG s_randSeed = 1;
+static UBYTE simpleRand(void)
+{
+    s_randSeed = (s_randSeed * 1103515245 + 12345) & 0x7fffffff;
+    return (UBYTE)(s_randSeed % 100);
+}
 
 tMonster* monsterCreate(UBYTE monsterType)
 {
@@ -145,9 +154,9 @@ void monsterAttack(tMonster* monster, tCharacter* target)
     }
 }
 
-void monsterDropLoot(tMonster* monster)
+void monsterDropLoot(tMonster* monster, tInventory* pInventory)
 {
-    if (!monster || monster->_state != MONSTER_STATE_DEAD)
+    if (!monster || monster->_state != MONSTER_STATE_DEAD || !pInventory)
         return;
 
     // Roll for each possible drop
@@ -155,11 +164,11 @@ void monsterDropLoot(tMonster* monster)
     {
         if (monster->_dropTable[i] != 0)  // If there's an item in this slot
         {
-            UBYTE roll = 1;//rand() % 100;  // Roll 0-99
+            UBYTE roll = simpleRand();  // Roll 0-99
             if (roll < monster->_dropChance[i])
             {
-                // Item dropped! Handle item creation here
-                // TODO: Implement item creation system
+                // Item dropped! Add to inventory
+                inventoryAddItem(pInventory, monster->_dropTable[i], 1);
             }
         }
     }

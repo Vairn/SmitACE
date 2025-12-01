@@ -107,6 +107,7 @@ void ScreenUpdate(void)
 
 void ScreenFadeFromBlack(UWORD *pal, LONG delay, void *upFunc)
 {
+    logWrite("ScreenFadeFromBlack");
     if (g_pCurrentScreen->_pFade->eState != FADE_STATE_IN)
     {
         fadeSet(g_pCurrentScreen->_pFade, FADE_STATE_IN, delay, upFunc);
@@ -115,6 +116,7 @@ void ScreenFadeFromBlack(UWORD *pal, LONG delay, void *upFunc)
 
 void ScreenFadeToBlack(UWORD *pal, LONG delay, void *upFunc)
 {
+    logWrite("ScreenFadeToBlack");
     if (g_pCurrentScreen->_pFade->eState != FADE_STATE_OUT)
     {
         fadeSet(g_pCurrentScreen->_pFade, FADE_STATE_OUT, delay, upFunc);

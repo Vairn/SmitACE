@@ -59,7 +59,7 @@ tTextBitMap *textRendererCreateText(
  * @brief Color segment for multi-color text
  * @note Increased to 64 to support all 32 text palette colors and more
  */
-#define MAX_COLOR_SEGMENTS 32
+#define MAX_COLOR_SEGMENTS 64
 typedef struct {
     tTextBitMap *pBitmap;  ///< Text bitmap for this segment
     UBYTE ubColor;          ///< Color index for this segment

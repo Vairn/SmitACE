@@ -1,5 +1,10 @@
 #include "gameState.h"
 #include "Renderer.h"
+#include "inventory.h"
+#include "wallbutton.h"
+#include "doorbutton.h"
+#include "doorlock.h"
+#include "item.h"
 #include <ace/managers/memory.h>
 tGameState *g_pGameState= NULL;
 
@@ -35,6 +40,14 @@ void FreeGameState()
         monsterListDestroy(g_pGameState->m_pMonsterList);
         g_pGameState->m_pMonsterList = NULL;
     }
+    if (g_pGameState->m_pInventory)
+    {
+        inventoryDestroy(g_pGameState->m_pInventory);
+        g_pGameState->m_pInventory = NULL;
+    }
+    wallButtonListDestroy(&g_pGameState->m_wallButtons);
+    doorButtonListDestroy(&g_pGameState->m_doorButtons);
+    doorLockListDestroy(&g_pGameState->m_doorLocks);
     memFree(g_pGameState, sizeof(tGameState));
     g_pGameState = NULL;
 }
@@ -47,6 +60,16 @@ UBYTE InitNewGame()
     g_pGameState->m_pCurrentParty = characterPartyCreate();
     g_pGameState->m_pCurrentParty->_BatteryLevel = 100;
     g_pGameState->m_pMonsterList = monsterListCreate();
+    g_pGameState->m_pInventory = inventoryCreate();
+    
+    // Initialize button and lock lists
+    wallButtonListCreate(&g_pGameState->m_wallButtons);
+    doorButtonListCreate(&g_pGameState->m_doorButtons);
+    doorLockListCreate(&g_pGameState->m_doorLocks);
+    
+    // Initialize item system
+    itemSystemInit();
+    
     // Failed to Init New Game
     return 0;
 }

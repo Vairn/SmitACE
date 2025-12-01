@@ -71,6 +71,7 @@ void fadeSet(
 
 tFadeState fadeProcess(tFade *pFade)
 {
+	logBlockBegin("fadeProcess(pFade: %p)", pFade);
 	tFadeState eState = pFade->eState;
 	if (pFade->eState != FADE_STATE_IDLE && pFade->eState != FADE_STATE_EVENT_FIRED)
 	{
@@ -85,6 +86,7 @@ tFadeState fadeProcess(tFade *pFade)
 		if (pFade->pView->uwFlags & VP_FLAG_AGA)
 		{
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
+			logWrite("ubRatio: %hhu", ubRatio);
 			paletteDimAGA(
 				(ULONG *)pFade->pPaletteRef, (ULONG *)pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
@@ -92,17 +94,21 @@ tFadeState fadeProcess(tFade *pFade)
 		else
 		{
 			UBYTE ubRatio = (15 * ubCnt) / pFade->ubCntEnd;
+			logWrite("ubRatio: %hhu", ubRatio);
 			paletteDim(
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
 		}
+		logWrite("viewUpdateGlobalPalette(pFade->pView)");
 		viewUpdateGlobalPalette(pFade->pView);
+		logWrite("ptplayerSetMasterVolume(ubVolume)");
 
 		UBYTE ubVolume = (64 * ubCnt) / pFade->ubCntEnd;
 		ptplayerSetMasterVolume(ubVolume);
 
 		if (pFade->ubCnt >= pFade->ubCntEnd)
 		{
+			logWrite("FADE_STATE_EVENT_FIRED");
 			pFade->eState = FADE_STATE_EVENT_FIRED;
 			// Save state for return incase fade object gets destroyed in fade cb
 			eState = pFade->eState;
@@ -114,8 +120,10 @@ tFadeState fadeProcess(tFade *pFade)
 	}
 	else
 	{
+		logWrite("FADE_STATE_IDLE");
 		pFade->eState = FADE_STATE_IDLE;
 		eState = pFade->eState;
 	}
+	logWrite("fadeProcess()");
 	return eState;
 }

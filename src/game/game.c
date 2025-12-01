@@ -13,6 +13,9 @@
 #include "Renderer.h"
 #include "mouse_pointer.h"
 #include "maze.h"
+#include "wallbutton.h"
+#include "doorbutton.h"
+#include "doorlock.h"
 
 #include "game_ui.h"
 #include "game_ui_regions.h"
@@ -338,13 +341,36 @@ void handleDoorClick(UBYTE x, UBYTE y)
     switch (cellType)
     {
     case MAZE_DOOR:
-        // Create door event to open door (uses event position, no data needed)
+        // Check if door is locked
         {
-            UBYTE eventData[1] = {0};
-            tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
-            handleEvent(pMaze, pEvent);
-            mazeRemoveEvent(pMaze, pEvent);
-            g_ubRedrawRequire = 2;
+            tDoorLock* pLock = doorLockFindAt(&g_pGameState->m_doorLocks, x, y);
+            if (pLock && pLock->_state == DOORLOCK_STATE_LOCKED)
+            {
+                // Try to unlock with inventory
+                if (doorLockTryUnlock(pLock, g_pGameState->m_pInventory, 0))
+                {
+                    // Door unlocked, now open it
+                    UBYTE eventData[1] = {0};
+                    tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
+                    handleEvent(pMaze, pEvent);
+                    mazeRemoveEvent(pMaze, pEvent);
+                    g_ubRedrawRequire = 2;
+                }
+                else
+                {
+                    // Door is locked and player doesn't have key
+                    // TODO: Show message "Door is locked"
+                }
+            }
+            else
+            {
+                // Door is not locked, open it
+                UBYTE eventData[1] = {0};
+                tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
+                handleEvent(pMaze, pEvent);
+                mazeRemoveEvent(pMaze, pEvent);
+                g_ubRedrawRequire = 2;
+            }
         }
         break;
         
@@ -360,10 +386,50 @@ void handleDoorClick(UBYTE x, UBYTE y)
         break;
         
     case MAZE_DOOR_LOCKED:
-        // Check if player has key (you can implement key checking logic here)
-        // For now, just show a message that the door is locked
-        // You can add a message event here
+        // Check if player has key
+        {
+            tDoorLock* pLock = doorLockFindAt(&g_pGameState->m_doorLocks, x, y);
+            if (pLock)
+            {
+                if (doorLockTryUnlock(pLock, g_pGameState->m_pInventory, 0))
+                {
+                    // Door unlocked, change cell type and open
+                    mazeSetCell(pMaze, x, y, MAZE_DOOR);
+                    UBYTE eventData[1] = {0};
+                    tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
+                    handleEvent(pMaze, pEvent);
+                    mazeRemoveEvent(pMaze, pEvent);
+                    g_ubRedrawRequire = 2;
+                }
+                else
+                {
+                    // Door is locked and player doesn't have key
+                    // TODO: Show message "Door is locked"
+                }
+            }
+        }
         break;
+    }
+}
+
+void handleButtonClick(UBYTE x, UBYTE y, UBYTE wallSide)
+{
+    // Check for wall buttons
+    tWallButton* pWallButton = wallButtonFindAt(&g_pGameState->m_wallButtons, x, y, wallSide);
+    if (pWallButton)
+    {
+        wallButtonClick(pWallButton, g_pGameState->m_pCurrentMaze);
+        g_ubRedrawRequire = 2;
+        return;
+    }
+    
+    // Check for door buttons
+    tDoorButton* pDoorButton = doorButtonFindAt(&g_pGameState->m_doorButtons, x, y, wallSide);
+    if (pDoorButton)
+    {
+        doorButtonClick(pDoorButton, g_pGameState->m_pCurrentMaze);
+        g_ubRedrawRequire = 2;
+        return;
     }
 }
 
@@ -562,6 +628,21 @@ static void gameGsCreate(void)
         pPalRef[p + 64] = s_aTextPalette[p];
     }
     
+ 
+    
+    // // Sync the modified palette from fade reference back to viewport palette
+    // // viewUpdateGlobalPalette() reads from pView->pFirstVPort->pPalette, not from pFade->pPaletteRef
+    // // For AGA (8bpp), we have 256 colors (ULONG entries)
+    // ULONG *pVPortPal = (ULONG *)pScreen->_pView->pFirstVPort->pPalette;
+    // ULONG *pFadePal = (ULONG *)pScreen->_pFade->pPaletteRef;
+    // for (int i = 0; i < 256; i++)
+    // {
+    //     pVPortPal[i] = pFadePal[i];
+    // }
+    
+    // // Update the hardware palette registers
+     viewUpdateGlobalPalette(pScreen->_pView);
+    
 #ifdef ACE_USE_AGA_FEATURES
     // Set sprite palette banks to use text palette (bank 4 = colors 64-79)
     // Mouse pointer uses channels 0 (even) and 1 (odd), both set to bank 4
@@ -649,7 +730,7 @@ static void gameGsLoop(void)
                             // Check if monster was defeated
                             if (monster->_base._HP == 0) {
                                 monster->_state = MONSTER_STATE_DEAD;
-                                monsterDropLoot(monster);
+                                monsterDropLoot(monster, g_pGameState->m_pInventory);
                                 // Give experience to party
                                 for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
                                     g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
