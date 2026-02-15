@@ -8,7 +8,7 @@
 #include <ace/utils/palette.h>
 #include <ace/managers/bob.h>
 
-#include "gameState.h"
+#include "GameState.h"
 #include "screen.h"
 #include "Renderer.h"
 #include "mouse_pointer.h"
@@ -233,8 +233,7 @@ void TurnRight()
 
 void TurnLeft()
 {
-    g_pGameState->m_pCurrentParty->_PartyFacing--;
-    g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
+    g_pGameState->m_pCurrentParty->_PartyFacing = (g_pGameState->m_pCurrentParty->_PartyFacing + 3) % 4;
     g_ubRedrawRequire = 2;
 }
 
@@ -967,7 +966,7 @@ static void gameGsLoop(void)
         
         // Process mouse multiple times per frame for better responsiveness
         mouseProcess();
-        mouseProcess();
+      //  mouseProcess();
         
         // Check if a movement button is still pressed (repeat-while-held, like EOB/DM)
         if (s_ubPressedMovementButton != 0 && mouseCheck(MOUSE_PORT_1, MOUSE_LMB)) {

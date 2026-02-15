@@ -1,4 +1,4 @@
-#include "gameState.h"
+#include "GameState.h"
 #include "Renderer.h"
 #include "inventory.h"
 #include "wallbutton.h"
@@ -19,7 +19,8 @@ UBYTE SaveGameState(const char* fileName)
     return 0;
 }
 void FreeGameState()
-{   
+{
+    if (!g_pGameState) return;
     if (g_pGameState->m_pCurrentMaze)
     {
         mazeDelete(g_pGameState->m_pCurrentMaze);
@@ -103,7 +104,7 @@ UBYTE mazeMove(tMaze* pMaze, tCharacterParty* pParty, UBYTE direction)
         break;
     }
 
-    if (x < 0 || x >= pMaze->_width || y < 0 || y >= pMaze->_height)
+    if (x >= pMaze->_width || y >= pMaze->_height)
     {
         // Failed to Move
         return 0;

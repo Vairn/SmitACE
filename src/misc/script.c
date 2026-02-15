@@ -1,5 +1,5 @@
 #include "script.h"
-#include "gameState.h"
+#include "GameState.h"
 #include <ace/managers/memory.h>
 
 // Script execution result types

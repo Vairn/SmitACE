@@ -1,5 +1,5 @@
 #pragma once
-#include "Maze.h"
+#include "maze.h"
 #include "wallset.h"
 #include "character.h"
 #include "script.h"

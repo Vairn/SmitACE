@@ -2,13 +2,14 @@ cmake_minimum_required(VERSION 3.14.0)
 project(Smite LANGUAGES ASM C)
 
 # Force 68020 CPU target for this project
-set(M68K_CPU "68020" CACHE STRING "Target CPU model" FORCE)
+#set(M68K_CPU "68020" CACHE STRING "Target CPU model" FORCE)
 
 #set(CMAKE_C_STANDARD 17)
 file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 set(ACE_USE_AGA_FEATURES ON)
 set(ACE_USE_ECS_FEATURES ON)
 set(ACE_DEBUG_UAE ON)
+set(ACE_DEBUG ON)
 if(ELF2HUNK)
 	set(SMITE_EXECUTABLE smite.elf)
 	set(SMITE_OUTPUT_EXECUTABLE smite.exe)
@@ -22,7 +23,7 @@ if(ELF2HUNK)
 	)
 	add_custom_command(
 		TARGET ${SMITE_EXECUTABLE} POST_BUILD
-		COMMAND ${OBJDUMP} --disassemble -S ${SMITE_EXECUTABLE} > smite.s
+		COMMAND ${OBJDUMP} --disassemble -m68020 -S ${SMITE_EXECUTABLE} > smite.s
 	)
 else()
 	SET(SMITE_EXECUTABLE smite)
@@ -54,6 +55,7 @@ target_compile_options(${SMITE_EXECUTABLE} PUBLIC -fomit-frame-pointer)
 
 # CRITICAL: Disable aggressive optimizations for 68020+ - known to cause crashes
 # -fno-optimize-sibling-calls: Prevents tail-call optimization that generates invalid branches
+# Per-function attributes don't work for function pointer calls, so we need global disable
 target_compile_options(${SMITE_EXECUTABLE} PRIVATE  -fno-optimize-sibling-calls)
 target_compile_options(ace PRIVATE   -fno-optimize-sibling-calls)
 

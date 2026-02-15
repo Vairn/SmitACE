@@ -1,7 +1,7 @@
 #pragma once
 
 #include "character.h"
-#include "Maze.h"
+#include "maze.h"
 
 // Forward declaration
 struct _tInventory;

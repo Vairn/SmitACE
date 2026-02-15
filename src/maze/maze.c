@@ -123,13 +123,15 @@ tMaze* mazeLoad(const char* filename)
             UBYTE y = 0;
             UBYTE eventType = 0;
             UBYTE eventDataSize = 0;
-            UBYTE* eventData = 0;
+            UBYTE* eventData = NULL;
             fileRead(pFile, &x, 1);
             fileRead(pFile, &y, 1);
             fileRead(pFile, &eventType, 1);
             fileRead(pFile, &eventDataSize, 1);
-            eventData = (UBYTE*)memAllocFastClear(eventDataSize);
-            fileRead(pFile, eventData, eventDataSize);
+            if (eventDataSize > 0) {
+                eventData = (UBYTE*)memAllocFastClear(eventDataSize);
+                fileRead(pFile, eventData, eventDataSize);
+            }
             tMazeEvent* event = mazeEventCreate(x, y, eventType, eventDataSize, eventData);
             mazeAppendEvent(pMaze, event);
         }
@@ -184,11 +186,15 @@ void mazeSave(tMaze* pMaze, const char* sFilename)
 
 UBYTE mazeGetCell(tMaze* pMaze, UBYTE x, UBYTE y)
 {
+    if (!pMaze || x >= pMaze->_width || y >= pMaze->_height)
+        return MAZE_WALL;
     return pMaze->_mazeData[x + y * pMaze->_width];
 }
 
 void mazeSetCell(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE value)
 {
+    if (!pMaze || x >= pMaze->_width || y >= pMaze->_height)
+        return;
     pMaze->_mazeData[x + y * pMaze->_width] = value;
 }
 
@@ -212,9 +218,13 @@ tMazeEvent* mazeEventCreate(UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSi
     event->_y = y;
     event->_eventType = eventType;
     event->_eventDataSize = eventDataSize;
-    event->_eventData = (UBYTE*) memAllocFastClear(eventDataSize * sizeof(UBYTE));
-    for (int i = 0; i < eventDataSize; i++) {
-        event->_eventData[i] = eventData[i];
+    if (eventDataSize > 0 && eventData) {
+        event->_eventData = (UBYTE*) memAllocFastClear(eventDataSize * sizeof(UBYTE));
+        for (int i = 0; i < eventDataSize; i++) {
+            event->_eventData[i] = eventData[i];
+        }
+    } else {
+        event->_eventData = NULL;
     }
     event->_next = NULL;
     event->_prev = NULL;
@@ -231,7 +241,8 @@ void mazeRemoveEvent(tMaze* pMaze, tMazeEvent* event) {
     if (event->_next != NULL) {
         event->_next->_prev = event->_prev;
     }
-    memFree(event->_eventData, event->_eventDataSize);
+    if (event->_eventData)
+        memFree(event->_eventData, event->_eventDataSize);
     memFree(event, sizeof(tMazeEvent));
     pMaze->_eventCount--;
 }
@@ -260,7 +271,8 @@ void mazeRemoveAllEvents(tMaze* pMaze) {
     tMazeEvent* currentEvent = pMaze->_events;
     while (currentEvent != NULL) {
         tMazeEvent* nextEvent = currentEvent->_next;
-        memFree(currentEvent->_eventData, currentEvent->_eventDataSize);
+        if (currentEvent->_eventData)
+            memFree(currentEvent->_eventData, currentEvent->_eventDataSize);
         memFree(currentEvent, sizeof(tMazeEvent));
         currentEvent = nextEvent;
     }
@@ -322,16 +334,11 @@ void mazeAddString(tMaze* pMaze, char* string, UWORD length)
 void mazeRemoveStrings(tMaze* pMaze)
 {
     if (pMaze==NULL) return;
-    while (pMaze->_strings == NULL)
+    while (pMaze->_strings != NULL)
     {
         tMazeString* nextString=pMaze->_strings->_next;
         memFree(pMaze->_strings->_string,pMaze->_strings->_length);
         memFree(pMaze->_strings,sizeof(tMazeString));
         pMaze->_strings=nextString;
     }
-    {
-        /* code */
-    }
-    
-
 }

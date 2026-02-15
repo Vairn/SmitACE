@@ -16,24 +16,30 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 	pFade->eState = FADE_STATE_IDLE;
 	pFade->pView = pView;
 	pFade->ubColorCount = ubColorCount;
-	if (pView->uwFlags & VP_FLAG_AGA)
+	
+	// Check viewport flags for AGA, not view flags (VP_FLAG_AGA != VIEW_FLAG_GLOBAL_AGA)
+	if (pView->pFirstVPort->eFlags & VP_FLAG_AGA)
 	{
-		pFade->pPaletteRef = memAllocFastClear(sizeof(ULONG) * (1 << pView->pFirstVPort->ubBpp));
+		UWORD uwColorCount = (1 << pView->pFirstVPort->ubBpp);
+		pFade->pPaletteRef = memAllocFastClear(sizeof(ULONG) * uwColorCount);
+		
+		// For AGA, copy as ULONGs (24-bit colors), not UWORDs
+		ULONG *pDest = (ULONG *)pFade->pPaletteRef;
+		ULONG *pSrc = (ULONG *)pPalette;
+		for (UWORD i = 0; i < ubColorCount; ++i)
+		{
+			pDest[i] = pSrc[i];
+		}
 	}
 	else
 	{
 		pFade->pPaletteRef = memAllocFastClear(sizeof(UWORD) * 32);
-	}
-	const UBYTE ubMaxColors = (sizeof(pFade->pPaletteRef) / sizeof(pFade->pPaletteRef[0]));
-	if (ubColorCount > ubMaxColors)
-	{
-		logWrite(
-			"ERR: Unsupported palette size: %hhu, max: %hhu",
-			ubColorCount, ubMaxColors);
-	}
-	for (UBYTE i = 0; i < ubColorCount; ++i)
-	{
-		pFade->pPaletteRef[i] = pPalette[i];
+		
+		// For OCS/ECS, copy as UWORDs (12-bit colors)
+		for (UBYTE i = 0; i < ubColorCount; ++i)
+		{
+			pFade->pPaletteRef[i] = pPalette[i];
+		}
 	}
 	logBlockEnd("fadeCreate()");
 	return pFade;
@@ -41,7 +47,9 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 
 void fadeDestroy(tFade *pFade)
 {
-	if (pFade->pView->uwFlags & VP_FLAG_AGA)
+	if (!pFade) return;
+	// Check viewport flags for AGA, not view flags
+	if (pFade->pView->pFirstVPort->eFlags & VP_FLAG_AGA)
 	{
 		// AGA uses 24 bit palette entries.
 		memFree(pFade->pPaletteRef, sizeof(ULONG) * (1 << pFade->pView->pFirstVPort->ubBpp));
@@ -49,7 +57,7 @@ void fadeDestroy(tFade *pFade)
 	else
 	{
 		// 12 bit palette entries for Non-AGA
-		memFree(pFade->pPaletteRef, sizeof(UWORD) * (32));
+		memFree(pFade->pPaletteRef, sizeof(UWORD) * 32);
 	}
 
 	memFree(pFade, sizeof(*pFade));
@@ -83,7 +91,8 @@ tFadeState fadeProcess(tFade *pFade)
 			ubCnt = pFade->ubCntEnd - pFade->ubCnt;
 		}
 
-		if (pFade->pView->uwFlags & VP_FLAG_AGA)
+		// Check viewport flags for AGA, not view flags
+		if (pFade->pView->pFirstVPort->eFlags & VP_FLAG_AGA)
 		{
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
 			logWrite("ubRatio: %hhu", ubRatio);
