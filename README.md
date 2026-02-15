@@ -1,59 +1,98 @@
-[![MIT][license-shield]][license-text]
+[![MIT License][license-shield]][license-text]
+
 # SmitACE
 
-Smite Ported To C
-Using A Custom AGA branch of [ACE](https://github.com/Vairn/ACE/tree/AGA)
+**Smite Ported To C** — A dungeon-crawling RPG for the Amiga, built with a custom AGA branch of [ACE](https://github.com/Vairn/ACE/tree/AGA).
 
-Based on my BlitzGameJam Entry [My Life Sucks](https://vairn.itch.io/my-life-sucks)
+Based on the BlitzBasic game jam entry [My Life Sucks](https://vairn.itch.io/my-life-sucks) and the [Smite PostJam](https://github.com/Vairn/Smite/tree/PostJam) source.
 
-[github](https://github.com/Vairn/Smite/tree/PostJam)
+---
 
 ## Overview
-SmitACE is a C port of the game Smite, built using a custom AGA branch of the ACE framework. This project aims to bring the game to the Amiga platform with AGA support.
+
+SmitACE brings the dungeon-crawler *Smite* to the Amiga platform with full AGA (Advanced Graphics Architecture) support. The game features maze navigation, turn-based combat, an inventory system, and an embedded script language for level events and interactions.
+
+| Platform | Requirements |
+|----------|--------------|
+| **Amiga** | AGA chipset, 68020+ CPU |
+| **Development** | Windows, VS Code, Amiga C Extension, CMake |
+
+---
+
+## Quick Start
+
+```bash
+git clone --recursive https://github.com/Vairn/SmitACE.git
+cd SmitACE
+mkdir build && cd build
+cmake ..
+cmake --build .
+```
+
+Copy the `data` folder to the build output directory before running. See **[Installation Guide](docs/INSTALL.md)** for detailed setup.
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [**Installation Guide**](docs/INSTALL.md) | Prerequisites, toolchain setup, and verification |
+| [**Building**](docs/BUILDING.md) | CMake options, build targets, and distribution packages |
+| [**Architecture**](docs/ARCHITECTURE.md) | Code structure, game states, and module overview |
+| [**Development**](docs/DEVELOPMENT.md) | Debugging, scripting, and adding new content |
+
+---
 
 ## Project Structure
+
 ```
 SmitACE/
-├── src/           # Source code
-│   ├── game/      # Core game logic
-│   ├── Gfx/       # Graphics and rendering
-│   ├── items/     # Game items and inventory
-│   ├── maze/      # Maze generation and management
-│   └── misc/      # Miscellaneous utilities
+├── src/
+│   ├── game/      # Core game logic, states, rendering
+│   ├── Gfx/       # Graphics (wallsets, UI)
+│   ├── items/     # Inventory and items
+│   ├── maze/      # Maze generation and navigation
+│   └── misc/      # Scripts, monsters, utilities
 ├── include/       # Header files
-├── res/          # Resource files
-├── test/         # Test files
-└── deps/         # Dependencies
+├── res/           # Resource files
+├── docs/          # Documentation
+└── deps/ACE/      # ACE framework (submodule)
 ```
 
-## Prerequisites
-- Visual Studio Code
-- Amiga C Extension by Bartman ([Amiga C/C++ Compile, Debug & Profile](https://marketplace.visualstudio.com/items?itemName=BartmanAbyss.amiga-debug))
-- ACE compiler setup (see Installation section)
+---
 
-## Installation
-1. Clone the repository
-2. Install the Amiga C Extension in VSCode
-3. Follow the [ACE installation instructions](https://github.com/AmigaPorts/ACE/blob/master/docs/installing/compiler.md)
-4. Open the project in VSCode
-5. Build the project (it will create a build folder)
-6. Copy the data folder to the build directory
+## Build Options
 
-## Building
-The project uses CMake as its build system. The build process will:
-1. Create a build directory
-2. Generate necessary build files
-3. Compile the project
-4. Place the executable in the build directory
+| Option | Purpose |
+|--------|---------|
+| `-DACE_DEBUG=ON` | Enable ACE debug mode |
+| `-DGAME_DEBUG=ON` | Enable game debug features |
+| `-DGAME_DEBUG_AI=ON` | Enable AI debugging |
+| `-DACE_DEBUG=OFF -DGAME_DEBUG=OFF` | Release build |
 
-## Development
-- Main game logic is in `src/game/`
-- Graphics and rendering code is in `src/Gfx/`
-- Item system is in `src/items/`
-- Maze generation is in `src/maze/`
+Example debug build:
+
+```bash
+cmake .. -DACE_DEBUG=ON -DGAME_DEBUG=ON
+```
+
+See [docs/BUILDING.md](docs/BUILDING.md) for full details.
+
+---
+
+## Distribution
+
+- **ZIP**: `cmake --build . --target generateZip` — executable + data for emulator use  
+- **ADF**: `cmake --build . --target generateAdf` — Amiga disk image (requires `exe2adf`)
+
+---
 
 ## License
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+
+This project is licensed under the MIT License — see [LICENSE.md](LICENSE.md) for details.
+
+---
 
 [license-text]: https://opensource.org/license/mit/
 [license-shield]: https://img.shields.io/badge/license-MIT-brightgreen
