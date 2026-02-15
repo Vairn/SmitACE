@@ -92,7 +92,7 @@ build/
 The project enables these ACE features (see `CMakeLists.txt`):
 
 - `ACE_USE_AGA_FEATURES` — Advanced Graphics Architecture support
-- `ACE_USE_ECS_FEATURES` — Entity-Component-System
+- `ACE_USE_ECS_FEATURES` — Enhanced Chip Set
 
 ## Compiler Notes
 
