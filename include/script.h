@@ -98,6 +98,7 @@ typedef enum {
 #define EVENT_IDENTIFYITEMS 30
 #define EVENT_ENCOUNTER 31
 #define EVENT_SOUND 32
+#define EVENT_WIN 33
 
 #define EVENT_IF 128
 #define EVENT_ELSE 129
@@ -135,3 +136,6 @@ void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
 void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);
 void executeScript(tMaze *pMaze, UWORD startIndex);
 void updateBatteryChargers(tMaze* maze);
+
+// Called by script to show a message in the game UI (implemented in game.c)
+void gameDisplayMessage(const char* szMessage);

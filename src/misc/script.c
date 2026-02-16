@@ -1,6 +1,9 @@
 #include "script.h"
 #include "GameState.h"
+#include "maze.h"
+#include "inventory.h"
 #include <ace/managers/memory.h>
+#include <string.h>
 
 // Script execution result types
 typedef enum {
@@ -65,6 +68,28 @@ BOOL evaluateCondition(tMaze *pMaze, UBYTE *conditionData, UBYTE dataSize)
                     break;
                 case EVENT_PARTY_DIRECTION:
                     result = (g_pGameState->m_pCurrentParty->_PartyFacing == operandValue);
+                    break;
+                case EVENT_HAS_CLASS:
+                    if (g_pGameState->m_pCurrentParty) {
+                        for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
+                            if (g_pGameState->m_pCurrentParty->_characters[i] &&
+                                g_pGameState->m_pCurrentParty->_characters[i]->_Class == operandValue) {
+                                result = TRUE;
+                                break;
+                            }
+                        }
+                    }
+                    break;
+                case EVENT_HAS_RACE:
+                    if (g_pGameState->m_pCurrentParty) {
+                        for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
+                            if (g_pGameState->m_pCurrentParty->_characters[i] &&
+                                g_pGameState->m_pCurrentParty->_characters[i]->_Race == operandValue) {
+                                result = TRUE;
+                                break;
+                            }
+                        }
+                    }
                     break;
             }
             break;
@@ -248,9 +273,15 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         
     case EVENT_SHOWMESSAGE:
         if (pEvent->_eventDataSize > 0) {
-            // Assuming eventData contains message ID or text pointer
-            logWrite("Showing message ID: %d\n", pEvent->_eventData[0]);
-            // TODO: Implement actual message display system
+            UWORD messageId = pEvent->_eventData[0];
+            if (pEvent->_eventDataSize >= 2)
+                messageId |= (UWORD)(pEvent->_eventData[1] << 8);
+            char msgBuffer[512];
+            if (mazeGetStringByIndex(pMaze, messageId, msgBuffer, sizeof(msgBuffer))) {
+                gameDisplayMessage(msgBuffer);
+            } else {
+                logWrite("Showing message ID: %d (no string in maze table)\n", (int)messageId);
+            }
         }
         break;
         
@@ -314,20 +345,26 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         break;
         
     case EVENT_GIVEITEM:
-        if (pEvent->_eventDataSize >= 2) {
+        if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pInventory) {
             UBYTE itemType = pEvent->_eventData[0];
             UBYTE quantity = pEvent->_eventDataSize > 1 ? pEvent->_eventData[1] : 1;
-            logWrite("Giving item type %d, quantity %d to party\n", itemType, quantity);
-            // TODO: Implement inventory system integration
+            if (inventoryAddItem(g_pGameState->m_pInventory, itemType, quantity)) {
+                logWrite("Gave item type %d, quantity %d to party\n", itemType, quantity);
+            } else {
+                logWrite("Failed to give item type %d (invalid index or inventory full)\n", itemType);
+            }
         }
         break;
         
     case EVENT_TAKEITEM:
-        if (pEvent->_eventDataSize >= 2) {
+        if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pInventory) {
             UBYTE itemType = pEvent->_eventData[0];
             UBYTE quantity = pEvent->_eventDataSize > 1 ? pEvent->_eventData[1] : 1;
-            logWrite("Taking item type %d, quantity %d from party\n", itemType, quantity);
-            // TODO: Implement inventory system integration
+            if (inventoryRemoveItem(g_pGameState->m_pInventory, itemType, quantity)) {
+                logWrite("Took item type %d, quantity %d from party\n", itemType, quantity);
+            } else {
+                logWrite("Failed to take item type %d (not in inventory or insufficient)\n", itemType);
+            }
         }
         break;
         
@@ -409,21 +446,24 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         break;
         
     case EVENT_ADDXP:
-        if (pEvent->_eventDataSize >= 1) {
+        if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pCurrentParty) {
             UWORD xpAmount = pEvent->_eventData[0];
-            if (pEvent->_eventDataSize >= 2) {
-                xpAmount |= (pEvent->_eventData[1] << 8); // Support 16-bit XP values
+            if (pEvent->_eventDataSize >= 2)
+                xpAmount |= (UWORD)(pEvent->_eventData[1] << 8);
+            for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
+                if (g_pGameState->m_pCurrentParty->_characters[i])
+                    g_pGameState->m_pCurrentParty->_characters[i]->_Experience += xpAmount;
             }
-            logWrite("Adding %d XP to party\n", xpAmount);
-            // TODO: Implement XP system integration
         }
         break;
         
     case EVENT_DAMAGE:
-        if (pEvent->_eventDataSize >= 1) {
+        if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pCurrentParty) {
             UBYTE damageAmount = pEvent->_eventData[0];
-            logWrite("Dealing %d damage to party\n", damageAmount);
-            // TODO: Implement damage system integration
+            if (g_pGameState->m_pCurrentParty->_BatteryLevel > damageAmount)
+                g_pGameState->m_pCurrentParty->_BatteryLevel -= damageAmount;
+            else
+                g_pGameState->m_pCurrentParty->_BatteryLevel = 0;
         }
         break;
         
@@ -513,8 +553,12 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         if (pEvent->_eventDataSize >= 1) {
             UBYTE soundId = pEvent->_eventData[0];
             logWrite("Playing sound ID: %d\n", soundId);
-            // TODO: Implement sound system integration
+            /* SFX API not wired yet; placeholder for ptplayer or sound effects */
         }
+        break;
+        
+    case EVENT_WIN:
+        g_ubRequestWin = 1;
         break;
         
     case EVENT_ENCOUNTER:

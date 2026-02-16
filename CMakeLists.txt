@@ -56,8 +56,8 @@ target_compile_options(${SMITE_EXECUTABLE} PUBLIC -fomit-frame-pointer)
 # CRITICAL: Disable aggressive optimizations for 68020+ - known to cause crashes
 # -fno-optimize-sibling-calls: Prevents tail-call optimization that generates invalid branches
 # Per-function attributes don't work for function pointer calls, so we need global disable
-target_compile_options(${SMITE_EXECUTABLE} PRIVATE  -fno-optimize-sibling-calls)
-target_compile_options(ace PRIVATE   -fno-optimize-sibling-calls)
+#target_compile_options(${SMITE_EXECUTABLE} PRIVATE  -fno-optimize-sibling-calls)
+#target_compile_options(ace PRIVATE   -fno-optimize-sibling-calls)
 
 if(GAME_DEBUG)
 	target_compile_definitions(${SMITE_EXECUTABLE} PRIVATE GAME_DEBUG)

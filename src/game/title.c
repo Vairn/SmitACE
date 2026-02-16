@@ -1,5 +1,6 @@
 #include "title.h"
 #include "smite.h"
+#include "GameState.h"
 
 #include <ace/managers/viewport/simplebuffer.h>
 #include <ace/managers/game.h>
@@ -83,6 +84,8 @@ void cbOnPressed(Region *pRegion, UBYTE left, UBYTE right)
 		ScreenFadeToBlack(NULL, 7, fadeCompleteTitle);
 		break;
 	case 1:
+		if (LoadGameState("data/save.dat"))
+			ScreenFadeToBlack(NULL, 7, fadeCompleteTitle);
 		break;
 	case 2:
 		ScreenFadeToBlack(NULL, 7, fadeCompleteExit);

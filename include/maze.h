@@ -105,6 +105,7 @@ void mazeDelete(tMaze* maze);
 void mazeRemoveAllEvents(tMaze* maze);
 
 void mazeAddString(tMaze* maze, char* string, UWORD length);
+UBYTE mazeGetStringByIndex(tMaze* pMaze, UWORD index, char* buffer, UWORD bufferSize);
 void mazeRemoveStrings(tMaze* maze);
 
 tDoorAnim* doorAnimCreate(BYTE x, BYTE y, UBYTE state);

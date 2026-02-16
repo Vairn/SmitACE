@@ -331,6 +331,25 @@ void mazeAddString(tMaze* pMaze, char* string, UWORD length)
 
 
 }
+
+UBYTE mazeGetStringByIndex(tMaze* pMaze, UWORD index, char* buffer, UWORD bufferSize)
+{
+    if (!pMaze || !buffer || bufferSize == 0)
+        return 0;
+    tMazeString* s = pMaze->_strings;
+    for (UWORD i = 0; i < index && s != NULL; i++)
+        s = s->_next;
+    if (s == NULL)
+        return 0;
+    UWORD copyLen = s->_length;
+    if (copyLen >= bufferSize)
+        copyLen = bufferSize - 1;
+    for (UWORD i = 0; i < copyLen; i++)
+        buffer[i] = (char)s->_string[i];
+    buffer[copyLen] = '\0';
+    return 1;
+}
+
 void mazeRemoveStrings(tMaze* pMaze)
 {
     if (pMaze==NULL) return;

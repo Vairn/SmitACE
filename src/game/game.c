@@ -20,6 +20,7 @@
 #include "game_ui.h"
 #include "game_ui_regions.h"
 #include "script.h"
+#include "item.h"
 #include "text_render.h"
 #include <string.h>
 ULONG seed = 1;
@@ -204,24 +205,62 @@ static void addMessage(const char *szMessage, eMessageType eType, UBYTE ubColor)
     s_ubMessageCount++;
 }
 
+void gameDisplayMessage(const char* szMessage)
+{
+    if (szMessage)
+        addMessage(szMessage, MESSAGE_TYPE_SMALL, 1);
+}
+
 void handleEquipmentClicked(WORD slotID)
 {
+    if (slotID >= 0 && slotID < 4 && g_pGameState && g_pGameState->m_pInventory) {
+        UBYTE itemIdx = g_pGameState->m_pInventory->pEquippedItem[slotID];
+        if (itemIdx != 255) {
+            tItem* pItem = getItem(itemIdx);
+            if (pItem && pItem->pszName)
+                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+            else
+                addMessage("Equipment", MESSAGE_TYPE_SMALL, 1);
+        }
+    }
 }
 
 void handleEquipmentUsed(WORD slotID)
 {
+    if (slotID >= 0 && slotID < 4)
+        addMessage("Use equipment", MESSAGE_TYPE_SMALL, 1);
 }
 
 void handleInventoryClicked(WORD slotID)
 {
+    if (slotID >= 0 && slotID < 6 && g_pGameState && g_pGameState->m_pInventory) {
+        UWORD idx = g_pGameState->m_pInventory->ubShowInventoryIndex + (UWORD)slotID;
+        if (idx < g_pGameState->m_pInventory->ubItemCount) {
+            UBYTE itemIdx = g_pGameState->m_pInventory->pItems[idx];
+            tItem* pItem = getItem(itemIdx);
+            if (pItem && pItem->pszName)
+                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+        }
+    }
 }
 
 void handleInventoryScrolled(WORD direction, UBYTE page)
 {
+    if (!g_pGameState || !g_pGameState->m_pInventory) return;
+    UBYTE maxIdx = (g_pGameState->m_pInventory->ubItemCount > 6) ? (g_pGameState->m_pInventory->ubItemCount - 6) : 0;
+    if (direction == 0) {
+        if (g_pGameState->m_pInventory->ubShowInventoryIndex > 0)
+            g_pGameState->m_pInventory->ubShowInventoryIndex--;
+    } else {
+        if (g_pGameState->m_pInventory->ubShowInventoryIndex < maxIdx)
+            g_pGameState->m_pInventory->ubShowInventoryIndex++;
+    }
+    g_ubRedrawRequire = 2;
 }
 
 void handleMapClicked(void)
 {
+    addMessage("Map", MESSAGE_TYPE_SMALL, 1);
 }
 
 void TurnRight()
@@ -358,7 +397,7 @@ void handleDoorClick(UBYTE x, UBYTE y)
                 else
                 {
                     // Door is locked and player doesn't have key
-                    // TODO: Show message "Door is locked"
+                    addMessage("Door is locked.", MESSAGE_TYPE_SMALL, 1);
                 }
             }
             else
@@ -403,7 +442,7 @@ void handleDoorClick(UBYTE x, UBYTE y)
                 else
                 {
                     // Door is locked and player doesn't have key
-                    // TODO: Show message "Door is locked"
+                    addMessage("Door is locked.", MESSAGE_TYPE_SMALL, 1);
                 }
             }
         }
@@ -555,19 +594,23 @@ static void fadeInComplete(void)
 static void gameGsCreate(void)
 {
     systemUse();
-    InitNewGame();
-    pScreen = ScreenGetActive();
-
-    g_pGameState->m_pCurrentMaze = mazeCreateDemoData();
-    g_pGameState->m_pCurrentParty->_PartyX = 2;
-    g_pGameState->m_pCurrentParty->_PartyY = 2;
-    g_pGameState->m_pCurrentParty->_PartyFacing = 0;
+    if (g_ubGameStateLoadedFromFile) {
+        g_ubGameStateLoadedFromFile = 0;
+        pScreen = ScreenGetActive();
+        pWallset = g_pGameState->m_pCurrentWallset;
+    } else {
+        InitNewGame();
+        pScreen = ScreenGetActive();
+        g_pGameState->m_pCurrentMaze = mazeCreateDemoData();
+        g_pGameState->m_pCurrentParty->_PartyX = 2;
+        g_pGameState->m_pCurrentParty->_PartyY = 2;
+        g_pGameState->m_pCurrentParty->_PartyFacing = 0;
+        pWallset = wallsetLoad("data/factory2/factory2.wll");
+        g_pGameState->m_pCurrentWallset = pWallset;
+    }
 
     // Load UI palette (colors 0-31) for the playfield frame and UI elements
     paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 32);
-    
-    pWallset = wallsetLoad("data/factory2/factory2.wll");
-    g_pGameState->m_pCurrentWallset = pWallset;
 
     // Load wallset palette into colors 32-63 to avoid conflict with UI colors (0-31)
     // The wallset graphics will be drawn with bitplane 5 set, shifting them to 32-63 range
@@ -640,7 +683,7 @@ static void gameGsCreate(void)
     // }
     
     // // Update the hardware palette registers
-     viewUpdateGlobalPalette(pScreen->_pView);
+    // 
     
 #ifdef ACE_USE_AGA_FEATURES
     // Set sprite palette banks to use text palette (bank 4 = colors 64-79)
@@ -678,7 +721,7 @@ static void gameGsCreate(void)
     gameUIInit(cbGameOnHovered, cbGameOnUnhovered, cbGameOnPressed, cbGameOnReleased);
     Layer *pLayer = gameUIGetLayer();
     layerEnablePointerUpdate(pLayer, 1);
-    // viewUpdateCLUT(pScreen->_pView);
+    viewUpdateGlobalPalette(pScreen->_pView);
     ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
 }
@@ -687,6 +730,13 @@ static void gameGsLoop(void)
 {
     if (g_ubGameActive)
     {
+        if (g_ubRequestWin) {
+            g_ubRequestWin = 0;
+            ptplayerEnableMusic(0);
+            ptplayerModDestroy(pMod);
+            stateChange(g_pStateMachineGame, &g_sStateWin);
+            return;
+        }
         gameUIUpdate();
 
         if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0)

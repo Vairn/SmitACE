@@ -32,7 +32,7 @@ void genericCreate(void) {
     mouseCreate(MOUSE_PORT_1);
     ptplayerCreate(1);
     // Optional: Set initial state. If not set, stateProcess() will safely do nothing.
-     stateChange(g_pStateMachineGame, &g_sStateGame);
+     stateChange(g_pStateMachineGame, &g_sStateLogo);
     systemUnuse();
     //ULONG memFree = memGetFastSize();
     //AllocateCommandList();

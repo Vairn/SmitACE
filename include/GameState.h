@@ -44,6 +44,12 @@ typedef struct _tGameState
 
 extern tGameState *g_pGameState;
 
+/* Set by LoadGameState on success; game GsCreate skips InitNewGame when this is 1 */
+extern UBYTE g_ubGameStateLoadedFromFile;
+
+/* Set by script EVENT_WIN; game loop transitions to win state when 1 */
+extern UBYTE g_ubRequestWin;
+
 UBYTE LoadGameState(const char* fileName);
 UBYTE SaveGameState(const char* fileName);
 void FreeGameState();

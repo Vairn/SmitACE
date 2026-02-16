@@ -46,7 +46,7 @@ static void gameOverGsCreate(void)
 
 static void fadeCompleteGameOver(void)
 {
-  stateChange(g_pStateMachineGame, &g_sStateWin);
+  stateChange(g_pStateMachineGame, &g_sStateTitle);
 }
 
 static void gameOverGsLoop(void)

@@ -84,6 +84,7 @@ tScreen *ScreenGetActive(void)
 
 void ScreenUpdate(void)
 {
+    logWrite("ScreenUpdate");
     systemSetDmaBit(DMAB_SPRITE, 1);
 
     mouse_pointer_update();
@@ -125,16 +126,17 @@ void ScreenFadeToBlack(UWORD *pal, LONG delay, void *upFunc)
 
 void ScreenClose()
 {
-    if (g_pCurrentScreen)
+    tScreen *pScreen = g_pCurrentScreen;
+    g_pCurrentScreen = 0;
+    if (pScreen)
     {
         systemSetDmaBit(DMAB_SPRITE, 0);
 
         mouse_pointer_destroy();
-        simpleBufferDestroy(g_pCurrentScreen->_pBfr);
-        viewDestroy(g_pCurrentScreen->_pView);
-        fadeDestroy(g_pCurrentScreen->_pFade);
+        simpleBufferDestroy(pScreen->_pBfr);
+        viewDestroy(pScreen->_pView);
+        fadeDestroy(pScreen->_pFade);
 
-        memFree(g_pCurrentScreen, sizeof(tScreen));
-        g_pCurrentScreen = 0;
+        memFree(pScreen, sizeof(tScreen));
     }
 }

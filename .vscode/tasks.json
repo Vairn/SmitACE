@@ -41,7 +41,10 @@
 			"label": "debug off",
 			"type": "shell",
 			"command": "cmake",
-			"group": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 			"args": [
 				"..",
 				"-DACE_DEBUG=OFF",
