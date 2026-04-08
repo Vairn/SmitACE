@@ -53,6 +53,13 @@ include_directories(${SDL2_INCLUDE_DIRS} include/)
 target_link_libraries(${SMITE_EXECUTABLE} ace )  
 target_compile_options(${SMITE_EXECUTABLE} PUBLIC -fomit-frame-pointer)
 
+# m68k-amiga-elf + LTO: GCC warns on many __attribute__s ACE uses ((hot))/((cold))/etc.
+# as "visibility attribute not supported in this configuration"; harmless noise.
+if(AMIGA)
+	target_compile_options(ace PRIVATE -Wno-attributes)
+	target_compile_options(${SMITE_EXECUTABLE} PRIVATE -Wno-attributes)
+endif()
+
 # CRITICAL: Disable aggressive optimizations for 68020+ - known to cause crashes
 # -fno-optimize-sibling-calls: Prevents tail-call optimization that generates invalid branches
 # Per-function attributes don't work for function pointer calls, so we need global disable

@@ -1,3 +1,4 @@
+#include "dungeon_atlas.hpp"
 #include "formats.hpp"
 #include <imgui.h>
 #include <imgui_internal.h>
@@ -67,6 +68,7 @@ static void apply_default_dock_layout(ImGuiID dockspace_id)
 	ImGui::DockBuilderDockWindow("Items", dock_right);
 	ImGui::DockBuilderDockWindow("Monsters", dock_right);
 	ImGui::DockBuilderDockWindow("Level entities (.lvl)", dock_right);
+	ImGui::DockBuilderDockWindow("Dungeon atlas", dock_right);
 	ImGui::DockBuilderFinish(dockspace_id);
 }
 
@@ -120,9 +122,11 @@ int main(int, char **)
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #else
-	const char *glsl_version = "#version 130";
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+	/* Windows/Linux: OpenGL 4.2 core (dungeon capture + ImGui). */
+	const char *glsl_version = "#version 420";
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #endif
 
 	GLFWwindow *window = glfwCreateWindow(1280, 720, "Smite Authoring Tool", nullptr, nullptr);
@@ -145,6 +149,7 @@ int main(int, char **)
 
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init(glsl_version);
+	initDungeonAtlasAfterGl();
 
 	static char s_root[512] = "data";
 	static char s_err[512] = "";
@@ -404,8 +409,13 @@ int main(int, char **)
 		}
 		ImGui::End();
 
+		drawDungeonAtlasWindow();
+
 		ImGui::Render();
 		glfwGetFramebufferSize(window, &fbW, &fbH);
+		glViewport(0, 0, fbW, fbH);
+		glDisable(GL_SCISSOR_TEST);
+		dungeonAtlasFlushDeferredGenerate(fbW, fbH);
 		glViewport(0, 0, fbW, fbH);
 		glClearColor(0.08f, 0.08f, 0.10f, 1);
 		glClear(GL_COLOR_BUFFER_BIT);
@@ -415,6 +425,7 @@ int main(int, char **)
 
 	if (g_tex)
 		glDeleteTextures(1, &g_tex);
+	shutdownDungeonAtlasWindow();
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
