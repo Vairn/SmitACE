@@ -34,6 +34,12 @@
 build/
 dist/
 res/
+
+# Accidental in-source / repo-root CMake configure (use -B build/... instead)
+/CMakeCache.txt
+/CMakeFiles/
+/_deps/
+
 .vscode/
 test/
 .vscode/SYMBOLS.DB
