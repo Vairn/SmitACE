@@ -51,6 +51,7 @@ extern tItem* s_vecItems;
 extern UBYTE s_ubItemCount;
 
 void loadItems(const char* filename);
+void saveItems(const char* filename);
 void itemSystemInit(void);
 void itemSystemDestroy(void);
 

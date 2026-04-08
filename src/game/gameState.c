@@ -1,4 +1,5 @@
 #include "GameState.h"
+#include "character.h"
 #include "Renderer.h"
 #include "inventory.h"
 #include "wallbutton.h"
@@ -7,6 +8,11 @@
 #include "item.h"
 #include "maze.h"
 #include "wallset.h"
+#include "ground_item.h"
+#include "pressure_plate.h"
+#include "game_manifest.h"
+#include "level_entities.h"
+#include "monster.h"
 #include <ace/managers/memory.h>
 #include <ace/utils/file.h>
 #include <ace/utils/disk_file.h>
@@ -15,7 +21,8 @@ tGameState *g_pGameState = NULL;
 UBYTE g_ubGameStateLoadedFromFile = 0;
 UBYTE g_ubRequestWin = 0;
 
-#define SAVE_VERSION 1
+#define SAVE_VERSION 2
+#define SAVE_VERSION_LEGACY 1
 
 UBYTE LoadGameState(const char* fileName)
 {
@@ -23,7 +30,7 @@ UBYTE LoadGameState(const char* fileName)
     if (!pFile) return 0;
     UBYTE ver = 0;
     fileRead(pFile, &ver, 1);
-    if (ver != SAVE_VERSION) { fileClose(pFile); return 0; }
+    if (ver != SAVE_VERSION && ver != SAVE_VERSION_LEGACY) { fileClose(pFile); return 0; }
     UBYTE levelId = 0;
     UBYTE partyX = 0, partyY = 0, partyFacing = 0, battery = 0;
     fileRead(pFile, &levelId, 1);
@@ -36,6 +43,12 @@ UBYTE LoadGameState(const char* fileName)
     if (invCount > INVENTORY_MAX_ITEMS) invCount = INVENTORY_MAX_ITEMS;
     g_pGameState = (tGameState*)memAllocFastClear(sizeof(tGameState));
     g_pGameState->m_pCurrentParty = characterPartyCreate();
+    if (!g_pGameState->m_pCurrentParty) {
+        fileClose(pFile);
+        memFree(g_pGameState, sizeof(tGameState));
+        g_pGameState = NULL;
+        return 0;
+    }
     g_pGameState->m_pCurrentParty->_PartyX = partyX;
     g_pGameState->m_pCurrentParty->_PartyY = partyY;
     g_pGameState->m_pCurrentParty->_PartyFacing = partyFacing;
@@ -45,7 +58,9 @@ UBYTE LoadGameState(const char* fileName)
     wallButtonListCreate(&g_pGameState->m_wallButtons);
     doorButtonListCreate(&g_pGameState->m_doorButtons);
     doorLockListCreate(&g_pGameState->m_doorLocks);
-    loadItems("data/items.dat");
+    gameManifestEnsureLoaded("data/game.smt");
+    loadItems((char *)gameManifestGet()->itemsPath);
+    monsterTableLoad((char *)gameManifestGet()->monstersPath);
     for (UBYTE i = 0; i < invCount; i++) {
         UBYTE itemIdx = 0, qty = 0;
         fileRead(pFile, &itemIdx, 1);
@@ -53,13 +68,16 @@ UBYTE LoadGameState(const char* fileName)
         inventoryAddItem(g_pGameState->m_pInventory, itemIdx, qty);
     }
     fileRead(pFile, g_pGameState->m_bGlobalFlags, 256);
+    if (ver >= SAVE_VERSION)
+        fileRead(pFile, g_pGameState->m_bLocalFlags, 256);
     fileClose(pFile);
+
+    characterPartyEnsureDefaultHero(g_pGameState->m_pCurrentParty);
+
     if (!LoadLevel((BYTE)levelId)) {
         FreeGameState();
         return 0;
     }
-    if (levelId == 0)
-        g_pGameState->m_pCurrentWallset = wallsetLoad("data/factory2/factory2.wll");
     g_ubGameStateLoadedFromFile = 1;
     return 1;
 }
@@ -71,7 +89,7 @@ UBYTE SaveGameState(const char* fileName)
     tFile* pFile = diskFileOpen(fileName, DISK_FILE_MODE_WRITE, 1);
     if (!pFile) return 0;
     UBYTE ver = SAVE_VERSION;
-    UBYTE levelId = 0;
+    UBYTE levelId = g_pGameState->m_ubCurrentLevel;
     fileWrite(pFile, &ver, 1);
     fileWrite(pFile, &levelId, 1);
     fileWrite(pFile, &g_pGameState->m_pCurrentParty->_PartyX, 1);
@@ -86,6 +104,7 @@ UBYTE SaveGameState(const char* fileName)
         fileWrite(pFile, &g_pGameState->m_pInventory->pItemQuantities[i], 1);
     }
     fileWrite(pFile, g_pGameState->m_bGlobalFlags, 256);
+    fileWrite(pFile, g_pGameState->m_bLocalFlags, 256);
     fileClose(pFile);
     return 1;
 }
@@ -130,6 +149,11 @@ UBYTE InitNewGame()
     preFillPosDataNoFacing(g_mazePos);
     g_pGameState = (tGameState*)memAllocFastClear(sizeof(tGameState));
     g_pGameState->m_pCurrentParty = characterPartyCreate();
+    if (!g_pGameState->m_pCurrentParty) {
+        memFree(g_pGameState, sizeof(tGameState));
+        g_pGameState = NULL;
+        return 0;
+    }
     g_pGameState->m_pCurrentParty->_BatteryLevel = 100;
     g_pGameState->m_pMonsterList = monsterListCreate();
     g_pGameState->m_pInventory = inventoryCreate();
@@ -139,15 +163,27 @@ UBYTE InitNewGame()
     doorButtonListCreate(&g_pGameState->m_doorButtons);
     doorLockListCreate(&g_pGameState->m_doorLocks);
     
-    // Load items from data file (or use fallback items if file missing)
-    loadItems("data/items.dat");
-    
+    gameManifestEnsureLoaded("data/game.smt");
+    loadItems((char *)gameManifestGet()->itemsPath);
+    monsterTableLoad((char *)gameManifestGet()->monstersPath);
+
+    characterPartyEnsureDefaultHero(g_pGameState->m_pCurrentParty);
+
     return 1;
 }
 
 UBYTE LoadLevel(BYTE level)
 {
     if (!g_pGameState) return 0;
+    const tGameManifest *man = gameManifestGet();
+    groundItemListClear(&g_pGameState->m_groundItems);
+    pressurePlateListClear(&g_pGameState->m_pressurePlates);
+    wallButtonListDestroy(&g_pGameState->m_wallButtons);
+    doorButtonListDestroy(&g_pGameState->m_doorButtons);
+    doorLockListDestroy(&g_pGameState->m_doorLocks);
+    wallButtonListCreate(&g_pGameState->m_wallButtons);
+    doorButtonListCreate(&g_pGameState->m_doorButtons);
+    doorLockListCreate(&g_pGameState->m_doorLocks);
     if (g_pGameState->m_pCurrentMaze) {
         mazeDelete(g_pGameState->m_pCurrentMaze);
         g_pGameState->m_pCurrentMaze = NULL;
@@ -156,10 +192,29 @@ UBYTE LoadLevel(BYTE level)
         wallsetDestroy(g_pGameState->m_pCurrentWallset);
         g_pGameState->m_pCurrentWallset = NULL;
     }
-    if (level == 0) {
-        g_pGameState->m_pCurrentMaze = mazeCreateDemoData();
-        return g_pGameState->m_pCurrentMaze ? 1 : 0;
+
+    UBYTE ul = (UBYTE)level;
+    if (ul < man->levelCount) {
+        const tGameLevelEntry *e = &man->levels[ul];
+        if (ul == 0 && e->mazePath[0] == '\0')
+            g_pGameState->m_pCurrentMaze = mazeCreateDemoData();
+        else
+            g_pGameState->m_pCurrentMaze = mazeLoad(e->mazePath);
+        if (!g_pGameState->m_pCurrentMaze)
+            return 0;
+        const char *wsPath = e->wallsetPath[0] ? e->wallsetPath : "data/factory2/factory2.wll";
+        g_pGameState->m_pCurrentWallset = wallsetLoad(wsPath);
+        if (!g_pGameState->m_pCurrentWallset) {
+            mazeDelete(g_pGameState->m_pCurrentMaze);
+            g_pGameState->m_pCurrentMaze = NULL;
+            return 0;
+        }
+        if (e->entitiesPath[0])
+            levelEntitiesLoad(g_pGameState, e->entitiesPath);
+        g_pGameState->m_ubCurrentLevel = ul;
+        return 1;
     }
+
     {
         char path[64];
         path[0] = 'd'; path[1] = 'a'; path[2] = 't'; path[3] = 'a'; path[4] = '/';
@@ -167,8 +222,15 @@ UBYTE LoadLevel(BYTE level)
         path[10] = '0' + (level / 10); path[11] = '0' + (level % 10);
         path[12] = '.'; path[13] = 'm'; path[14] = 'a'; path[15] = 'z'; path[16] = 'e'; path[17] = '\0';
         g_pGameState->m_pCurrentMaze = mazeLoad(path);
-        if (g_pGameState->m_pCurrentMaze)
+        if (g_pGameState->m_pCurrentMaze) {
             g_pGameState->m_pCurrentWallset = wallsetLoad("data/factory2/factory2.wll");
+            if (!g_pGameState->m_pCurrentWallset) {
+                mazeDelete(g_pGameState->m_pCurrentMaze);
+                g_pGameState->m_pCurrentMaze = NULL;
+                return 0;
+            }
+            g_pGameState->m_ubCurrentLevel = ul;
+        }
         return g_pGameState->m_pCurrentMaze ? 1 : 0;
     }
 }

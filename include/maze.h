@@ -100,6 +100,12 @@ void mazeIterateEvents(tMaze* maze, void (*callback)(tMazeEvent*));
 
 tMazeEvent* mazeFindEventAtPosition(tMaze* maze, UBYTE x, UBYTE y);
 
+/** Linked-list event at 0-based ordinal (walk order matches maze file / append order). */
+tMazeEvent* mazeEventAtOrdinal(tMaze* maze, UWORD ordinal);
+
+/** Ordinal of this node in the maze event list, or 0xFFFF if not found. */
+UWORD mazeEventOrdinalOf(tMaze* maze, tMazeEvent* event);
+
 void mazeDelete(tMaze* maze);
 
 void mazeRemoveAllEvents(tMaze* maze);

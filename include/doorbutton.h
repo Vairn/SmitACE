@@ -7,6 +7,8 @@
 // Forward declarations
 struct _wallset;
 typedef struct _wallset tWallset;
+struct _wallGfx;
+typedef struct _wallGfx tWallGfx;
 
 // Door button states
 #define DOORBUTTON_STATE_OFF 0
@@ -51,6 +53,8 @@ void doorButtonRemove(tDoorButtonList* pList, tDoorButton* pButton);
 UBYTE doorButtonClick(tDoorButton* pButton, tMaze* pMaze);
 tDoorButton* doorButtonFindAt(tDoorButtonList* pList, UBYTE x, UBYTE y, UBYTE wallSide);
 
-// Door button rendering
-void doorButtonRender(tDoorButton* pButton, tWallset* pWallset, tBitMap* pBuffer);
+tWallGfx* doorButtonGfxForSlot(tDoorButton* pButton, tWallset* pWallset, BYTE slotTx, BYTE slotTy);
+
+// Door button rendering (same slot / WALL_GFX_DOOR_BUTTON rules as wallButtonRender)
+void doorButtonRender(tDoorButton* pButton, tWallset* pWallset, tBitMap* pBuffer, BYTE slotTx, BYTE slotTy);
 

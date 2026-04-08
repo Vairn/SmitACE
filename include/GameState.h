@@ -8,6 +8,8 @@
 #include "wallbutton.h"
 #include "doorbutton.h"
 #include "doorlock.h"
+#include "ground_item.h"
+#include "pressure_plate.h"
 
 #include <ace/managers/state.h>
 
@@ -40,6 +42,10 @@ typedef struct _tGameState
     tDoorButtonList m_doorButtons; // Door buttons in current level
     tDoorLockList m_doorLocks;     // Door locks in current level
     tScriptState _scriptState;
+    UBYTE m_bMapVisible;           // Full-screen map: 1 = visible
+    UBYTE m_ubCurrentLevel;        // 0 = demo maze; else data/levelNN.maze
+    tGroundItemList m_groundItems; // Loot on floor (cleared on LoadLevel)
+    tPressurePlateList m_pressurePlates; // Step-on triggers (cleared on LoadLevel)
 } tGameState;
 
 extern tGameState *g_pGameState;

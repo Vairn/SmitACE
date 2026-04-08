@@ -3,7 +3,6 @@
 
 extern tStateManager *g_pStateMachineGame;
 
-
 static void MoveForwards();
 static void MoveBackwards();
 static void MoveLeft();

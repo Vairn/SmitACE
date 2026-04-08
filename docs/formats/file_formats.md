@@ -6,7 +6,7 @@
 The wallset format is used to store wall graphics and their properties for the game. It consists of a main data file and associated graphics files.
 
 ### Main Wallset File Structure
-The main wallset file (`.wst`) has the following binary structure:
+The main wallset file (`.wst`, `.wll`, etc.) has the following binary structure. **Multi-byte fields (`UWORD`, `WORD` screen coords) are stored big-endian** so Windows-authored files load correctly on Amiga.
 
 ```
 [Header] (3 bytes)

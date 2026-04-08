@@ -8,10 +8,6 @@
 
 tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 {
-	logBlockBegin(
-		"fadeCreate(pView: %p, pPalette: %p, ubColorCount: %hhu)",
-		pView, pPalette, ubColorCount);
-
 	tFade *pFade = memAllocFastClear(sizeof(*pFade));
 	pFade->eState = FADE_STATE_IDLE;
 	pFade->pView = pView;
@@ -41,7 +37,6 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 			pFade->pPaletteRef[i] = pPalette[i];
 		}
 	}
-	logBlockEnd("fadeCreate()");
 	return pFade;
 }
 
@@ -67,33 +62,24 @@ void fadeSet(
 	tFade *pFade, tFadeState eState, UBYTE ubFramesToFullFade,
 	tCbFadeOnDone cbOnDone)
 {
-	logBlockBegin(
-		"fadeSet(pFade: %p, eState: %d, ubFramesToFullFade: %hhu, cbOnDone: %p)",
-		pFade, eState, ubFramesToFullFade, cbOnDone);
 	pFade->eState = eState;
 	pFade->ubCnt = 0;
 	pFade->ubCntEnd = ubFramesToFullFade;
 	pFade->cbOnDone = cbOnDone;
-	logBlockEnd("fadeSet()");
 }
 
 tFadeState fadeProcess(tFade *pFade)
 {
-	logBlockBegin("fadeProcess(pFade: %p)", pFade);
 	if (!pFade) {
-		logBlockEnd("fadeProcess()");
 		return FADE_STATE_IDLE;
 	}
 	/* Avoid division by zero and guard against torn-down view (e.g. during shutdown). */
 	if (pFade->ubCntEnd == 0 || !pFade->pView || !pFade->pView->pFirstVPort) {
-		logBlockEnd("fadeProcess()");
 		return pFade->eState;
 	}
-	logWrite("fadeProcess: past guards");
 	tFadeState eState = pFade->eState;
 	if (pFade->eState != FADE_STATE_IDLE && pFade->eState != FADE_STATE_EVENT_FIRED)
 	{
-		logWrite("fadeProcess: active fade, incrementing ubCnt");
 		++pFade->ubCnt;
 
 		UBYTE ubCnt = pFade->ubCnt;
@@ -102,38 +88,27 @@ tFadeState fadeProcess(tFade *pFade)
 			ubCnt = pFade->ubCntEnd - pFade->ubCnt;
 		}
 
-		logWrite("fadeProcess: reading viewport flags");
 		// Check viewport flags for AGA, not view flags
 		if (pFade->pView->pFirstVPort->eFlags & VP_FLAG_AGA)
 		{
-			logWrite("fadeProcess: AGA path, computing ratio");
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
-			logWrite("fadeProcess: before paletteDimAGA");
 			paletteDimAGA(
 				(ULONG *)pFade->pPaletteRef, (ULONG *)pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
-			logWrite("fadeProcess: after paletteDimAGA");
 		}
 		else
 		{
-			logWrite("fadeProcess: OCS path, computing ratio");
 			UBYTE ubRatio = (15 * ubCnt) / pFade->ubCntEnd;
-			logWrite("fadeProcess: before paletteDim");
 			paletteDim(
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
 				pFade->ubColorCount, ubRatio);
-			logWrite("fadeProcess: after paletteDim");
 		}
-		logWrite("fadeProcess: before viewUpdateGlobalPalette");
 		viewUpdateGlobalPalette(pFade->pView);
-		logWrite("fadeProcess: after viewUpdateGlobalPalette, before ptplayerSetMasterVolume");
 		UBYTE ubVolume = (64 * ubCnt) / pFade->ubCntEnd;
 		ptplayerSetMasterVolume(ubVolume);
-		logWrite("fadeProcess: after ptplayerSetMasterVolume");
 
 		if (pFade->ubCnt >= pFade->ubCntEnd)
 		{
-			logWrite("fadeProcess: fade done, before cbOnDone");
 			pFade->eState = FADE_STATE_EVENT_FIRED;
 			// Save state for return incase fade object gets destroyed in fade cb
 			eState = pFade->eState;
@@ -141,15 +116,12 @@ tFadeState fadeProcess(tFade *pFade)
 			{
 				pFade->cbOnDone();
 			}
-			logWrite("fadeProcess: after cbOnDone");
 		}
 	}
 	else
 	{
-		logWrite("fadeProcess: idle/event_fired branch");
 		pFade->eState = FADE_STATE_IDLE;
 		eState = pFade->eState;
 	}
-	logWrite("fadeProcess: end");
 	return eState;
 }

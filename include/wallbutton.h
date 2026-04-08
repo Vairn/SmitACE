@@ -7,6 +7,8 @@
 // Forward declarations
 struct _wallset;
 typedef struct _wallset tWallset;
+struct _wallGfx;
+typedef struct _wallGfx tWallGfx;
 
 // Wall button states
 #define WALLBUTTON_STATE_OFF 0
@@ -42,6 +44,9 @@ typedef struct _wallButtonList
 
 // Wall button management
 tWallButton* wallButtonCreate(UBYTE x, UBYTE y, UBYTE wallSide, UBYTE type, UBYTE gfxIndex);
+/** Optional script payload (copied into allocated buffer). */
+tWallButton* wallButtonCreateWithPayload(UBYTE x, UBYTE y, UBYTE wallSide, UBYTE type, UBYTE gfxIndex,
+	UBYTE eventType, UBYTE dataSize, const UBYTE *pData);
 void wallButtonDestroy(tWallButton* pButton);
 void wallButtonListCreate(tWallButtonList* pList);
 void wallButtonListDestroy(tWallButtonList* pList);
@@ -52,6 +57,8 @@ void wallButtonRemove(tWallButtonList* pList, tWallButton* pButton);
 UBYTE wallButtonClick(tWallButton* pButton, tMaze* pMaze);
 tWallButton* wallButtonFindAt(tWallButtonList* pList, UBYTE x, UBYTE y, UBYTE wallSide);
 
-// Wall button rendering
-void wallButtonRender(tWallButton* pButton, tWallset* pWallset, tBitMap* pBuffer);
+tWallGfx* wallButtonGfxForSlot(tWallButton* pButton, tWallset* pWallset, BYTE slotTx, BYTE slotTy);
+
+// Wall button rendering (_gfxIndex tile must match slotTx/slotTy, or first WALL_GFX_WALL_BUTTON at that slot)
+void wallButtonRender(tWallButton* pButton, tWallset* pWallset, tBitMap* pBuffer, BYTE slotTx, BYTE slotTy);
 

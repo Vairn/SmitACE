@@ -59,6 +59,8 @@ typedef struct _characterList
     tCharacter** _characters; // dynamic list of Characters
 } tCharacterList;
 
+#define CHARACTER_PARTY_MAX 4
+
 typedef struct _characterParty
 {
     UBYTE _numCharacters;
@@ -82,3 +84,6 @@ void characterPartyDestroy(tCharacterParty* characterParty);
 void characterPartyAdd(tCharacterParty* characterParty, tCharacter* character);
 void characterPartyRemove(tCharacterParty* characterParty, UBYTE partyPos);
 void characterPartySwap(tCharacterParty* characterParty, UBYTE partyPos1, UBYTE partyPos2);
+
+/** If party has no members, add one default hero (for combat / item use). */
+void characterPartyEnsureDefaultHero(tCharacterParty* characterParty);

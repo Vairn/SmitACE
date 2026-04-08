@@ -1,5 +1,8 @@
 #pragma once
 #include "maze.h"
+
+/* Opcode values and legacy comments below. Payload layouts: docs/formats/script_events.md */
+
 /*
 ;  E6   ENCOUNTER
 ;  E7   IDENTIFYITEMS
@@ -134,6 +137,11 @@ typedef enum {
 // Function declarations
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
 void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);
+/**
+ * Run script opcodes starting at the given event ordinal (linked-list order).
+ * Stops when the program counter leaves the current anchor cell, on EVENT_END, or on error.
+ * Door/UI code still uses handleEvent() for single fire-and-forget opcodes.
+ */
 void executeScript(tMaze *pMaze, UWORD startIndex);
 void updateBatteryChargers(tMaze* maze);
 

@@ -3,6 +3,9 @@
 ## Overview
 The maze system in SmitACE is responsible for generating and managing the game's maze-like levels. It handles level generation, navigation, and collision detection.
 
+### On-disk `.maze` endianness
+`UWORD` fields (**event count**, **string count**, each **string length**) are stored **big-endian** so levels authored on Windows match Amiga loads. See [`mazeLoad`](../../src/maze/maze.c).
+
 ## Core Components
 
 ### Maze Generator (`maze.c`)

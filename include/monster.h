@@ -33,6 +33,8 @@ typedef struct _monster
     UWORD _experienceValue; // XP given when defeated
     UBYTE _partyPosX;
     UBYTE _partyPosY;
+    /** Ticks until next move attempt (staggered at spawn). */
+    UBYTE _moveCooldown;
 } tMonster;
 
 typedef struct _monsterList
@@ -42,14 +44,20 @@ typedef struct _monsterList
 } tMonsterList;
 
 // Monster creation and management
+/** Load monster stat table from data/monsters.dat (or path from game manifest). Safe to call repeatedly. */
+void monsterTableLoad(const char *szPath);
+void monsterTableClear(void);
+
 tMonster* monsterCreate(UBYTE monsterType);
 void monsterDestroy(tMonster* monster);
 tMonsterList* monsterListCreate();
 void monsterListDestroy(tMonsterList* monsterList);
 
 // Monster behavior
-void monsterUpdate(tMonster* monster, tCharacterParty* party);
+void monsterUpdate(tMonster* monster, tMaze* maze, tCharacterParty* party, tMonsterList* allMonsters);
 void monsterAttack(tMonster* monster, tCharacter* target);
+/** Melee strike from party member (after monster's attack). */
+void monsterTakeDamageFromCharacter(tMonster* monster, tCharacter* attacker);
 void monsterDropLoot(tMonster* monster, tInventory* pInventory);
 
 // Monster placement

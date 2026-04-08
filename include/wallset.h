@@ -15,6 +15,10 @@
 
 #endif
 
+/* Wallset tile _type values not tied to maze cell types (decorative / UI overlays). */
+#define WALL_GFX_WALL_BUTTON 250
+#define WALL_GFX_DOOR_BUTTON 251
+
 typedef struct _wallGfx
 {
     WORD _location[2];
@@ -39,6 +43,9 @@ typedef struct _wallset
     tWallGfx** _tileset;
     tBitMap** _gfx;
     tBitMap** _mask;
+    /** Per-plane tile counts (length _gfxCount); sum equals _tilesetCount. Filled at load; required for save. */
+    UBYTE* _tilesPerGroup;
+    UBYTE _header[3];
 
 } tWallset;
 

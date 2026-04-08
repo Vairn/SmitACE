@@ -5,6 +5,22 @@
 #include <ace/managers/system.h>
 #include <ace/utils/file.h>
 #include <ace/utils/disk_file.h>
+
+static UWORD mazeReadU16Be(tFile *pFile)
+{
+	UBYTE b[2];
+	fileRead(pFile, b, 2);
+	return ((UWORD)b[0] << 8) | (UWORD)b[1];
+}
+
+static void mazeWriteU16Be(tFile *pFile, UWORD v)
+{
+	UBYTE b[2];
+	b[0] = (UBYTE)(v >> 8);
+	b[1] = (UBYTE)v;
+	fileWrite(pFile, b, 2);
+}
+
 unsigned char demomap[] = {
   
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -45,6 +61,8 @@ tMaze* mazeCreateDemoData(void)
 {
     tMaze* pNewMaze = mazeCreate(32, 32);
     memcpy(pNewMaze->_mazeData, demomap, 32 * 32);
+    /* String index 0: used by demo pressure plate (EVENT_SHOWMESSAGE) */
+    mazeAddString(pNewMaze, "You trigger a pressure plate.", 30);
     
     // Add event triggers for unlocking doors
     // Event trigger 1: Unlocks the door at (27,3)
@@ -116,7 +134,7 @@ tMaze* mazeLoad(const char* filename)
         fileRead(pFile, pMaze->_mazeData, width * height);
         fileRead(pFile, pMaze->_mazeCol, width * height);
         fileRead(pFile, pMaze->_mazeFloor, width * height);
-        fileRead(pFile, &eventCount, 2);
+        eventCount = mazeReadU16Be(pFile);
         
         for (int i = 0; i < eventCount; i++) {
             UBYTE x = 0;
@@ -135,11 +153,11 @@ tMaze* mazeLoad(const char* filename)
             tMazeEvent* event = mazeEventCreate(x, y, eventType, eventDataSize, eventData);
             mazeAppendEvent(pMaze, event);
         }
-        fileRead(pFile, &stringCount, 2);
+        stringCount = mazeReadU16Be(pFile);
         for (int i = 0; i < stringCount; i++) {
             UWORD length = 0;
             UBYTE* string = 0;
-            fileRead(pFile, &length, 2);
+            length = mazeReadU16Be(pFile);
             string = (UBYTE*)memAllocFastClear(length);
             fileRead(pFile, string, length);
             //tMazeString* mazeString = mazeStringCreate(length, string);
@@ -162,7 +180,7 @@ void mazeSave(tMaze* pMaze, const char* sFilename)
         fileWrite(pFile, pMaze->_mazeData, pMaze->_width * pMaze->_height);
         fileWrite(pFile, pMaze->_mazeCol, pMaze->_width * pMaze->_height);
         fileWrite(pFile, pMaze->_mazeFloor, pMaze->_width * pMaze->_height);
-        fileWrite(pFile, &pMaze->_eventCount, 2);
+        mazeWriteU16Be(pFile, pMaze->_eventCount);
            tMazeEvent* event = pMaze->_events;
      
         while (event != NULL) {
@@ -173,10 +191,10 @@ void mazeSave(tMaze* pMaze, const char* sFilename)
             fileWrite(pFile, event->_eventData, event->_eventDataSize);
             event = event->_next;   
         }
-        fileWrite(pFile, &pMaze->_stringCount, 2);
+        mazeWriteU16Be(pFile, pMaze->_stringCount);
         tMazeString* mazeString = pMaze->_strings;
         while (mazeString != NULL) {
-            fileWrite(pFile, &mazeString->_length, 2);
+            mazeWriteU16Be(pFile, mazeString->_length);
             fileWrite(pFile, mazeString->_string, mazeString->_length);
             mazeString = mazeString->_next;
         }
@@ -264,6 +282,24 @@ tMazeEvent* mazeFindEventAtPosition(tMaze* pMaze, UBYTE x, UBYTE y) {
         event = event->_next;
     }
     return NULL;
+}
+
+tMazeEvent* mazeEventAtOrdinal(tMaze* pMaze, UWORD ordinal) {
+    tMazeEvent* e = pMaze->_events;
+    while (e != NULL && ordinal > 0) {
+        e = e->_next;
+        ordinal--;
+    }
+    return e;
+}
+
+UWORD mazeEventOrdinalOf(tMaze* pMaze, tMazeEvent* needle) {
+    UWORD i = 0;
+    for (tMazeEvent* e = pMaze->_events; e != NULL; e = e->_next, i++) {
+        if (e == needle)
+            return i;
+    }
+    return 0xFFFF;
 }
 
 void mazeRemoveAllEvents(tMaze* pMaze) {

@@ -116,6 +116,42 @@ void loadItems(const char* filename)
     logWrite("Items: loaded %d items from %s\n", (int)s_ubItemCount, filename);
 }
 
+void saveItems(const char* filename)
+{
+    if (!filename || !s_vecItems || s_ubItemCount == 0)
+        return;
+    tFile* pFile = diskFileOpen(filename, DISK_FILE_MODE_WRITE, 1);
+    if (!pFile) {
+        logWrite("Items: could not write %s\n", filename);
+        return;
+    }
+    fileWrite(pFile, &s_ubItemCount, 1);
+    for (UBYTE i = 0; i < s_ubItemCount; i++) {
+        tItem* p = &s_vecItems[i];
+        fileWrite(pFile, &p->ubType, 1);
+        fileWrite(pFile, &p->ubSubType, 1);
+        fileWrite(pFile, &p->ubFlags, 1);
+        fileWrite(pFile, &p->ubModifierType, 1);
+        fileWrite(pFile, &p->ubModifier, 1);
+        fileWrite(pFile, &p->ubValue, 1);
+        fileWrite(pFile, &p->ubWeight, 1);
+        fileWrite(pFile, &p->ubIcon, 1);
+        fileWrite(pFile, &p->ubUsageType, 1);
+        fileWrite(pFile, &p->ubKeyId, 1);
+        fileWrite(pFile, &p->ubEquipSlot, 1);
+        UBYTE nameLen = 0;
+        if (p->pszName)
+            nameLen = (UBYTE)strlen(p->pszName);
+        if (nameLen > 63)
+            nameLen = 63;
+        fileWrite(pFile, &nameLen, 1);
+        if (nameLen > 0)
+            fileWrite(pFile, p->pszName, nameLen);
+    }
+    fileClose(pFile);
+    logWrite("Items: saved %d items to %s\n", (int)s_ubItemCount, filename);
+}
+
 tItem* getItem(UBYTE ubIndex)
 {
     if (ubIndex >= s_ubItemCount || !s_vecItems)

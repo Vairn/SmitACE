@@ -593,66 +593,93 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
     return result;
 }
 
-// Main script execution function
+// Main script execution function (linked-list safe; stops when maze event list leaves anchor cell)
 void executeScript(tMaze *pMaze, UWORD startIndex)
 {
-    if (!pMaze || !pMaze->_events || pMaze->_eventCount == 0) {
+    if (!pMaze || !pMaze->_events || pMaze->_eventCount == 0 || !g_pGameState) {
         logWrite("No script events to execute.\n");
         return;
     }
-    
-    // Initialize script state
+
+    tMazeEvent* startEv = mazeEventAtOrdinal(pMaze, startIndex);
+    if (!startEv) {
+        logWrite("executeScript: bad start index %u\n", (unsigned)startIndex);
+        return;
+    }
+
+    UBYTE anchorX = startEv->_x;
+    UBYTE anchorY = startEv->_y;
+
     g_pGameState->_scriptState._scriptProgramCounter = startIndex;
     g_pGameState->_scriptState._top = 0;
     g_pGameState->_scriptState._conditionMet = FALSE;
     g_pGameState->_scriptState._skippingBlock = FALSE;
-    
-    logWrite("Starting script execution from index %d with %d total events.\n", startIndex, pMaze->_eventCount);
-    
+
+    logWrite("Script from index %u at (%u,%u), %u events.\n",
+        (unsigned)startIndex, anchorX, anchorY, (unsigned)pMaze->_eventCount);
+
     while (g_pGameState->_scriptState._scriptProgramCounter < pMaze->_eventCount) {
-        tMazeEvent* currentEvent = &pMaze->_events[g_pGameState->_scriptState._scriptProgramCounter];
-        
-        // Skip events if we're in a skipped conditional block
+        tMazeEvent* currentEvent = mazeEventAtOrdinal(
+            pMaze, g_pGameState->_scriptState._scriptProgramCounter);
+        if (!currentEvent)
+            break;
+
+        if (currentEvent->_x != anchorX || currentEvent->_y != anchorY) {
+            logWrite("executeScript: anchor cell ended at ordinal %u\n",
+                (unsigned)g_pGameState->_scriptState._scriptProgramCounter);
+            return;
+        }
+
         if (g_pGameState->_scriptState._skippingBlock) {
             if (currentEvent->_eventType != EVENT_ELSE && currentEvent->_eventType != EVENT_ENDIF) {
-                logWrite("Skipping event type %d at index %d\n", 
-                    currentEvent->_eventType, g_pGameState->_scriptState._scriptProgramCounter);
                 g_pGameState->_scriptState._scriptProgramCounter++;
                 continue;
             }
         }
-        
+
         tScriptExecutionResult execResult = executeEvent(pMaze, currentEvent);
-        
+
         switch (execResult.result) {
-            case SCRIPT_RESULT_CONTINUE:
-                g_pGameState->_scriptState._scriptProgramCounter++;
-                break;
-                
-            case SCRIPT_RESULT_GOTO:
-            case SCRIPT_RESULT_GOSUB:
-                if (execResult.targetIndex < pMaze->_eventCount) {
-                    g_pGameState->_scriptState._scriptProgramCounter = execResult.targetIndex;
-                } else {
-                    logWrite("Invalid jump target: %d\n", execResult.targetIndex);
-                    g_pGameState->_scriptState._scriptProgramCounter++;
-                }
-                break;
-                
-            case SCRIPT_RESULT_RETURN:
+        case SCRIPT_RESULT_CONTINUE:
+            g_pGameState->_scriptState._scriptProgramCounter++;
+            break;
+
+        case SCRIPT_RESULT_GOTO:
+        case SCRIPT_RESULT_GOSUB:
+            if (execResult.targetIndex < pMaze->_eventCount) {
                 g_pGameState->_scriptState._scriptProgramCounter = execResult.targetIndex;
-                break;
-                
-            case SCRIPT_RESULT_END:
-                logWrite("Script execution ended.\n");
-                return;
-                
-            case SCRIPT_RESULT_ERROR:
-                logWrite("Script execution error: %d\n", execResult.error);
-                return;
+                tMazeEvent* t = mazeEventAtOrdinal(pMaze, execResult.targetIndex);
+                if (t) {
+                    anchorX = t->_x;
+                    anchorY = t->_y;
+                }
+            } else {
+                logWrite("Invalid jump target: %u\n", (unsigned)execResult.targetIndex);
+                g_pGameState->_scriptState._scriptProgramCounter++;
+            }
+            break;
+
+        case SCRIPT_RESULT_RETURN:
+            g_pGameState->_scriptState._scriptProgramCounter = execResult.targetIndex;
+            {
+                tMazeEvent* t = mazeEventAtOrdinal(pMaze, execResult.targetIndex);
+                if (t) {
+                    anchorX = t->_x;
+                    anchorY = t->_y;
+                }
+            }
+            break;
+
+        case SCRIPT_RESULT_END:
+            logWrite("Script execution ended.\n");
+            return;
+
+        case SCRIPT_RESULT_ERROR:
+            logWrite("Script execution error: %d\n", execResult.error);
+            return;
         }
     }
-    
+
     logWrite("Script execution completed.\n");
 }
 

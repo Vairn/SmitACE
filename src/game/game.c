@@ -6,9 +6,14 @@
 #include <ace/managers/blit.h>
 #include <ace/utils/sprite.h>
 #include <ace/utils/palette.h>
+#include <ace/utils/extview.h>
 #include <ace/managers/bob.h>
 
 #include "GameState.h"
+#include "ground_item.h"
+#include "character.h"
+#include "monster.h"
+#include "inventory.h"
 #include "screen.h"
 #include "Renderer.h"
 #include "mouse_pointer.h"
@@ -16,6 +21,9 @@
 #include "wallbutton.h"
 #include "doorbutton.h"
 #include "doorlock.h"
+#include "pressure_plate.h"
+#include "wallset.h"
+#include "game_manifest.h"
 
 #include "game_ui.h"
 #include "game_ui_regions.h"
@@ -227,8 +235,45 @@ void handleEquipmentClicked(WORD slotID)
 
 void handleEquipmentUsed(WORD slotID)
 {
-    if (slotID >= 0 && slotID < 4)
-        addMessage("Use equipment", MESSAGE_TYPE_SMALL, 1);
+    if (slotID < 0 || slotID >= 4 || !g_pGameState || !g_pGameState->m_pInventory)
+        return;
+    UBYTE itemIdx = g_pGameState->m_pInventory->pEquippedItem[slotID];
+    if (itemIdx == 255)
+        return;
+    tItem* pItem = getItem(itemIdx);
+    if (!pItem) {
+        addMessage("Bad item.", MESSAGE_TYPE_SMALL, 1);
+        return;
+    }
+    characterPartyEnsureDefaultHero(g_pGameState->m_pCurrentParty);
+    tCharacter* hero = g_pGameState->m_pCurrentParty->_characters[0];
+    if (!hero)
+        return;
+
+    if (inventoryHasItem(g_pGameState->m_pInventory, itemIdx)) {
+        if (inventoryUseItem(g_pGameState->m_pInventory, itemIdx, hero)) {
+            if (pItem->pszName)
+                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+            g_ubRedrawRequire = 2;
+        } else {
+            addMessage("Cannot use that now.", MESSAGE_TYPE_SMALL, 1);
+        }
+        return;
+    }
+    /* Equipped-only (not in pack list): allow activatable consumables */
+    if ((pItem->ubFlags & ITEM_FLAG_ACTIVATABLE) && (pItem->ubUsageType == ITEM_USAGE_HEAL)
+        && hero->_HP < hero->_MaxHP) {
+        hero->_HP += pItem->ubValue;
+        if (hero->_HP > hero->_MaxHP)
+            hero->_HP = hero->_MaxHP;
+        if (pItem->ubFlags & ITEM_FLAG_CONSUMABLE)
+            g_pGameState->m_pInventory->pEquippedItem[slotID] = 255;
+        if (pItem->pszName)
+            addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+        g_ubRedrawRequire = 2;
+        return;
+    }
+    addMessage("Cannot use that.", MESSAGE_TYPE_SMALL, 1);
 }
 
 void handleInventoryClicked(WORD slotID)
@@ -260,7 +305,8 @@ void handleInventoryScrolled(WORD direction, UBYTE page)
 
 void handleMapClicked(void)
 {
-    addMessage("Map", MESSAGE_TYPE_SMALL, 1);
+    g_pGameState->m_bMapVisible = !g_pGameState->m_bMapVisible;
+    g_ubRedrawRequire = 2;
 }
 
 void TurnRight()
@@ -279,11 +325,23 @@ void TurnLeft()
 static void handleEventTrigger(void)
 {
     if (s_lastMoveResult == 3) {
-        tMazeEvent* pEvent = mazeFindEventAtPosition(g_pGameState->m_pCurrentMaze, 
+        tMazeEvent* pEvent = mazeFindEventAtPosition(g_pGameState->m_pCurrentMaze,
             g_pGameState->m_pCurrentParty->_PartyX, g_pGameState->m_pCurrentParty->_PartyY);
         if (pEvent) {
-            handleEvent(g_pGameState->m_pCurrentMaze, pEvent);
+            UWORD ord = mazeEventOrdinalOf(g_pGameState->m_pCurrentMaze, pEvent);
+            if (ord != 0xFFFF)
+                executeScript(g_pGameState->m_pCurrentMaze, ord);
         }
+    }
+}
+
+static void afterPartyMoved(void)
+{
+    handleEventTrigger();
+    if ((s_lastMoveResult == 1 || s_lastMoveResult == 3) && g_pGameState && g_pGameState->m_pCurrentMaze
+        && g_pGameState->m_pCurrentParty) {
+        pressurePlatesTryFireAt(&g_pGameState->m_pressurePlates, g_pGameState->m_pCurrentMaze,
+            g_pGameState->m_pCurrentParty->_PartyX, g_pGameState->m_pCurrentParty->_PartyY);
     }
 }
 
@@ -313,7 +371,7 @@ void MoveRight()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 1;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-    handleEventTrigger();
+    afterPartyMoved();
     g_ubRedrawRequire = 2;
 }
 
@@ -325,7 +383,7 @@ void MoveLeft()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 3;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-    handleEventTrigger();
+    afterPartyMoved();
     g_ubRedrawRequire = 2;
 }
 
@@ -337,7 +395,7 @@ void MoveBackwards()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing + 2;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-    handleEventTrigger();
+    afterPartyMoved();
     g_ubRedrawRequire = 2;
 }
 
@@ -349,7 +407,7 @@ void MoveForwards()
     UBYTE modFace = g_pGameState->m_pCurrentParty->_PartyFacing;
     modFace %= 4;
     s_lastMoveResult = mazeMove(g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty, modFace);
-    handleEventTrigger();
+    afterPartyMoved();
     g_ubRedrawRequire = 2;
 }
 
@@ -540,25 +598,12 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
     case VIEWPORT_UI_GADGET_DOOR:
         if (ubLeft)
         {
-            // Get the door position based on player's position and facing
-            UBYTE doorX = g_pGameState->m_pCurrentParty->_PartyX;
-            UBYTE doorY = g_pGameState->m_pCurrentParty->_PartyY;
-            switch (g_pGameState->m_pCurrentParty->_PartyFacing)
-            {
-            case 0: // North
-                doorY--;
-                break;
-            case 1: // East
-                doorX++;
-                break;
-            case 2: // South
-                doorY++;
-                break;
-            case 3: // West
-                doorX--;
-                break;
-            }
-            handleDoorClick(doorX, doorY);
+            tViewportPick pick;
+            viewportPickAtScreen(g_pGameState, mouseGetX(MOUSE_PORT_1), mouseGetY(MOUSE_PORT_1), &pick);
+            if (pick.kind == VIEWPORT_PICK_DOOR_AHEAD)
+                handleDoorClick(pick.cellX, pick.cellY);
+            else if (pick.kind == VIEWPORT_PICK_WALL_BUTTON || pick.kind == VIEWPORT_PICK_DOOR_BUTTON)
+                handleButtonClick(pick.cellX, pick.cellY, pick.wallSide);
         }
         break;
     default:
@@ -591,6 +636,47 @@ static void fadeInComplete(void)
 {
     g_ubGameActive = 1;
 }
+
+static void gameReloadPalette(void)
+{
+    tScreen *pScr = ScreenGetActive();
+    tWallset *pWll = g_pGameState->m_pCurrentWallset;
+    if (!pScr || !pWll) return;
+
+    {
+        const char *plt = gameManifestGet()->uiPalettePath;
+        if (!plt || !plt[0])
+            plt = "data/playfield.plt";
+        paletteLoadFromPath(plt, pScr->_pFade->pPaletteRef, 32);
+    }
+
+#ifdef ACE_USE_AGA_FEATURES
+    if (pScr->_pView->pFirstVPort->eFlags & VP_FLAG_AGA) {
+        ULONG *pPalRef = (ULONG *)pScr->_pFade->pPaletteRef;
+        for (int p = 0; p < 32; p++)
+            pPalRef[p + 32] = pWll->_palette[3 * p] << 16 | pWll->_palette[(3 * p) + 1] << 8 | pWll->_palette[(3 * p) + 2];
+        static const ULONG s_aTextPalette[32] = {
+            0x000000, 0x1A1A1A, 0x333333, 0x4D4D4D, 0x666666, 0x808080, 0x999999, 0xB3B3B3,
+            0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF, 0xFF8000,
+            0xE0E0E0, 0xC0C0C0, 0xFF4040, 0x40FF40, 0x4040FF, 0xFFFF40, 0xFF40FF, 0x40FFFF,
+            0xCCCCCC, 0xAA0000, 0x00AA00, 0x0000AA, 0xAAAA00, 0xAA00AA, 0x00AAAA, 0xFFAA00
+        };
+        for (int p = 0; p < 32; p++)
+            pPalRef[p + 64] = s_aTextPalette[p];
+        paletteDimAGA((ULONG *)pScr->_pFade->pPaletteRef, (ULONG *)pScr->_pView->pFirstVPort->pPalette, 255, 255);
+    } else
+#endif
+        paletteDim((UWORD *)pScr->_pFade->pPaletteRef, (volatile UWORD *)pScr->_pView->pFirstVPort->pPalette, 32, 15);
+    viewUpdateGlobalPalette(pScr->_pView);
+    ScreenUpdate();
+}
+
+static void fadeCompleteReloadPalette(void)
+{
+    gameReloadPalette();
+    ScreenFadeFromBlack(NULL, 7, 0);
+}
+
 static void gameGsCreate(void)
 {
     systemUse();
@@ -599,18 +685,31 @@ static void gameGsCreate(void)
         pScreen = ScreenGetActive();
         pWallset = g_pGameState->m_pCurrentWallset;
     } else {
-        InitNewGame();
+        if (!InitNewGame()) {
+            systemUnuse();
+            return;
+        }
         pScreen = ScreenGetActive();
-        g_pGameState->m_pCurrentMaze = mazeCreateDemoData();
+        {
+            UBYTE startLv = gameManifestGet()->startLevel;
+            if (!LoadLevel((BYTE)startLv)) {
+                systemUnuse();
+                return;
+            }
+        }
+        pWallset = g_pGameState->m_pCurrentWallset;
         g_pGameState->m_pCurrentParty->_PartyX = 2;
         g_pGameState->m_pCurrentParty->_PartyY = 2;
         g_pGameState->m_pCurrentParty->_PartyFacing = 0;
-        pWallset = wallsetLoad("data/factory2/factory2.wll");
-        g_pGameState->m_pCurrentWallset = pWallset;
     }
 
     // Load UI palette (colors 0-31) for the playfield frame and UI elements
-    paletteLoadFromPath("data/playfield.plt", pScreen->_pFade->pPaletteRef, 32);
+    {
+        const char *plt = gameManifestGet()->uiPalettePath;
+        if (!plt || !plt[0])
+            plt = "data/playfield.plt";
+        paletteLoadFromPath(plt, pScreen->_pFade->pPaletteRef, 32);
+    }
 
     // Load wallset palette into colors 32-63 to avoid conflict with UI colors (0-31)
     // The wallset graphics will be drawn with bitplane 5 set, shifting them to 32-63 range
@@ -737,6 +836,10 @@ static void gameGsLoop(void)
             stateChange(g_pStateMachineGame, &g_sStateWin);
             return;
         }
+        if (keyUse(KEY_F9)) {
+            statePush(g_pStateMachineGame, &g_sStatePaused);
+            return;
+        }
         gameUIUpdate();
 
         if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0)
@@ -765,24 +868,25 @@ static void gameGsLoop(void)
             tMonster* monster = g_pGameState->m_pMonsterList->_monsters[i];
             if (monster && monster->_state != MONSTER_STATE_DEAD) {
                 // Update monster state
-                monsterUpdate(monster, g_pGameState->m_pCurrentParty);
+                monsterUpdate(monster, g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty,
+                    g_pGameState->m_pMonsterList);
 
                 // Check for combat
                 if (monster->_state == MONSTER_STATE_AGGRESSIVE) {
                     // If monster is in same cell as party, initiate combat
                     if (monster->_partyPosX == g_pGameState->m_pCurrentParty->_PartyX &&
                         monster->_partyPosY == g_pGameState->m_pCurrentParty->_PartyY) {
-                        // Monster attacks first character in party
                         if (g_pGameState->m_pCurrentParty->_numCharacters > 0) {
-                            monsterAttack(monster, g_pGameState->m_pCurrentParty->_characters[0]);
-                            
-                            // Check if monster was defeated
+                            tCharacter* hero = g_pGameState->m_pCurrentParty->_characters[0];
+                            monsterAttack(monster, hero);
+                            if (hero->_HP > 0 && monster->_state != MONSTER_STATE_DEAD)
+                                monsterTakeDamageFromCharacter(monster, hero);
                             if (monster->_base._HP == 0) {
                                 monster->_state = MONSTER_STATE_DEAD;
                                 monsterDropLoot(monster, g_pGameState->m_pInventory);
-                                // Give experience to party
                                 for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
-                                    g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
+                                    if (g_pGameState->m_pCurrentParty->_characters[j])
+                                        g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
                                 }
                             }
                         }
@@ -793,7 +897,10 @@ static void gameGsLoop(void)
 
         if (g_ubRedrawRequire)
         {
-            drawView(g_pGameState, pScreen->_pBfr->pBack);
+            if (g_pGameState->m_bMapVisible)
+                drawFullScreenMap(g_pGameState, pScreen->_pBfr->pBack);
+            else
+                drawView(g_pGameState, pScreen->_pBfr->pBack);
             g_ubRedrawRequire--;
         }
 
@@ -1096,6 +1203,25 @@ static void gameGsLoop(void)
         
         if (keyCheck(KEY_ESCAPE))
             gameExit();
+ // F - Log memory usage
+ 
+ if (keyCheck(KEY_F)) {
+         logWrite("[MEM] Chip free: %lu, Fast free: %lu, Any free: %lu\n",
+             memGetFreeChipSize(), memGetFastSize(), memGetFreeSize());
+         }
+        // P - Fade out, reload palette, fade in
+        static UBYTE s_ubPPressed = 0;
+        if (keyCheck(KEY_P)) {
+            if (!s_ubPPressed) {
+                tScreen *pScr = ScreenGetActive();
+                if (pScr && pScr->_pFade->eState == FADE_STATE_IDLE) {
+                    s_ubPPressed = 1;
+                    ScreenFadeToBlack(NULL, 7, fadeCompleteReloadPalette);
+                }
+            }
+        } else {
+            s_ubPPressed = 0;
+        }
 
         if (keyCheck(KEY_W) || keyCheck(KEY_UP))
         {
@@ -1243,6 +1369,3 @@ static void gameGsDestroy(void)
 }
 tState g_sStateGame = {
     .cbCreate = gameGsCreate, .cbLoop = gameGsLoop, .cbDestroy = gameGsDestroy};
-
-tState g_statePaused = {
-    .cbCreate = NULL, .cbLoop = NULL, .cbDestroy = NULL};

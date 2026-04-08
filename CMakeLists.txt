@@ -73,6 +73,8 @@ set(GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/generated)
 add_custom_command(
     TARGET ${SMITE_EXECUTABLE}
     PRE_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${DATA_DIR}"
+    COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_SOURCE_DIR}/data" "${DATA_DIR}"
     COMMAND ${CMAKE_COMMAND}
     -DLANGUAGE:STRING="C"
     -DHEADER_DIR:PATH="${CMAKE_SOURCE_DIR}/src"

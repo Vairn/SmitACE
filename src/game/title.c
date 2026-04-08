@@ -33,7 +33,7 @@ RegionId exitGameRegionId;
 
 static void fadeCompleteTitle()
 {
-	stateChange(g_pStateMachineGame, &g_sStateGame);
+	stateChange(g_pStateMachineGame, &g_sStateLoading);
 }
 
 static void fadeCompleteExit()

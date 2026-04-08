@@ -72,8 +72,8 @@ void gameUIInit(cbRegion cbOnHovered, cbRegion cbOnUnHovered, cbRegionClick cbOn
     gameAddRegion(65,192,22,38, GAME_UI_GADGET_BATTERY, MOUSE_EXAMINE);
     gameAddRegion(178,192,66,38, GAME_UI_GADGET_MAP, MOUSE_EXAMINE);
 
-    // Viewport - door interaction only
-    gameAddRegion(1,1,248,160, VIEWPORT_UI_GADGET_DOOR, MOUSE_EXAMINE);
+    /* Viewport primary click (door / wall & door buttons); align with GAME_UI_GADGET_VIEWPORT */
+    gameAddRegion(1,28,248,160, VIEWPORT_UI_GADGET_DOOR, MOUSE_EXAMINE);
 
 
 	layerSetEnable(s_gameUILayer, 1);

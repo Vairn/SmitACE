@@ -1,5 +1,6 @@
 #include "doorbutton.h"
 #include "wallset.h"
+#include "wall_interactable_placeholder.h"
 #include "script.h"
 #include <ace/managers/memory.h>
 #include <ace/managers/blit.h>
@@ -181,33 +182,47 @@ tDoorButton* doorButtonFindAt(tDoorButtonList* pList, UBYTE x, UBYTE y, UBYTE wa
     return NULL;
 }
 
-void doorButtonRender(tDoorButton* pButton, tWallset* pWallset, tBitMap* pBuffer)
+tWallGfx* doorButtonGfxForSlot(tDoorButton* pButton, tWallset* pWallset, BYTE slotTx, BYTE slotTy)
+{
+    if (!pButton || !pWallset)
+        return NULL;
+    if (pButton->_gfxIndex < pWallset->_tilesetCount)
+    {
+        tWallGfx* g = pWallset->_tileset[pButton->_gfxIndex];
+        if (g && g->_location[0] == slotTx && g->_location[1] == slotTy)
+            return g;
+    }
+    for (UWORD i = 0; i < pWallset->_tilesetCount; i++)
+    {
+        tWallGfx* g = pWallset->_tileset[i];
+        if (g && g->_location[0] == slotTx && g->_location[1] == slotTy && g->_type == WALL_GFX_DOOR_BUTTON)
+            return g;
+    }
+    return NULL;
+}
+
+void doorButtonRender(tDoorButton* pButton, tWallset* pWallset, tBitMap* pBuffer, BYTE slotTx, BYTE slotTy)
 {
     if (!pButton || !pWallset || !pBuffer)
         return;
-    
-    // Find the button graphics in the wallset
-    if (pButton->_gfxIndex < pWallset->_tilesetCount)
+    tWallGfx* pGfx = doorButtonGfxForSlot(pButton, pWallset, slotTx, slotTy);
+    if (pGfx && pGfx->_setIndex < pWallset->_gfxCount)
     {
-        tWallGfx* pGfx = pWallset->_tileset[pButton->_gfxIndex];
-        if (pGfx && pGfx->_setIndex < pWallset->_gfxCount)
-        {
-            // Calculate screen position based on button state
-            UWORD frameOffset = 0;
-            if (pButton->_state == DOORBUTTON_STATE_ON || pButton->_state == DOORBUTTON_STATE_PRESSED)
-            {
-                frameOffset = pGfx->_height; // Use second frame for pressed state
-            }
-            
-            blitUnsafeCopyMask(
-                pWallset->_gfx[pGfx->_setIndex],
-                pGfx->_x, pGfx->_y + frameOffset,
-                pBuffer,
-                pGfx->_screen[0] + SOFFX, pGfx->_screen[1] + SOFFX,
-                pGfx->_width, pGfx->_height,
-                (UBYTE *)pWallset->_mask[pGfx->_setIndex]->Planes[0]
-            );
-        }
+        UWORD frameOffset = 0;
+        if (pButton->_state == DOORBUTTON_STATE_ON || pButton->_state == DOORBUTTON_STATE_PRESSED)
+            frameOffset = pGfx->_height;
+        blitUnsafeCopyMask(
+            pWallset->_gfx[pGfx->_setIndex],
+            pGfx->_x, pGfx->_y + frameOffset,
+            pBuffer,
+            pGfx->_screen[0] + SOFFX, pGfx->_screen[1] + SOFFX,
+            pGfx->_width, pGfx->_height,
+            (UBYTE *)pWallset->_mask[pGfx->_setIndex]->Planes[0]
+        );
+        return;
     }
+    UBYTE on = (pButton->_state == DOORBUTTON_STATE_ON || pButton->_state == DOORBUTTON_STATE_PRESSED);
+    wallInteractablePlaceholderDraw(pBuffer, pWallset, slotTx, slotTy,
+        WALL_INTERACT_PLACEHOLDER_DOOR_IDLE, WALL_INTERACT_PLACEHOLDER_DOOR_ACTIVE, on);
 }
 
