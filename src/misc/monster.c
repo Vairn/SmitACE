@@ -406,12 +406,12 @@ void monsterListDestroy(tMonsterList* list)
     }
 }
 
-void monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMonsterList *allMonsters)
+UBYTE monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMonsterList *allMonsters)
 {
 	if (!monster || monster->_state == MONSTER_STATE_DEAD)
-		return;
+		return 0;
 	if (!party)
-		return;
+		return 0;
 
 	if (monster->_moveCooldown > 0)
 		monster->_moveCooldown--;
@@ -436,7 +436,10 @@ void monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMons
 			monster->_state = MONSTER_STATE_IDLE;
 	}
 
+	UBYTE moved = 0;
 	if (maze && allMonsters && monster->_moveCooldown == 0) {
+		UBYTE oldx = monster->_partyPosX;
+		UBYTE oldy = monster->_partyPosY;
 		monster->_moveCooldown = MONSTER_MOVE_PERIOD;
 		switch (monster->_state) {
 		case MONSTER_STATE_IDLE:
@@ -452,6 +455,8 @@ void monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMons
 		default:
 			break;
 		}
+		if (monster->_partyPosX != oldx || monster->_partyPosY != oldy)
+			moved = 1;
 	}
 
 	logWrite(
@@ -460,6 +465,8 @@ void monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMons
 		(unsigned)monster->_partyPosY, (unsigned)party->_PartyX, (unsigned)party->_PartyY,
 		(unsigned)distance, (unsigned)monster->_state, (unsigned)monster->_base._HP,
 		(unsigned)monster->_base._MaxHP, (unsigned)monster->_aggroRange);
+
+	return moved;
 }
 
 void monsterAttack(tMonster* monster, tCharacter* target)

@@ -663,10 +663,9 @@ static void gameReloadPalette(void)
         };
         for (int p = 0; p < 32; p++)
             pPalRef[p + 64] = s_aTextPalette[p];
-        paletteDimAGA((ULONG *)pScr->_pFade->pPaletteRef, (ULONG *)pScr->_pView->pFirstVPort->pPalette, 255, 255);
-    } else
+    }
 #endif
-        paletteDim((UWORD *)pScr->_pFade->pPaletteRef, (volatile UWORD *)pScr->_pView->pFirstVPort->pPalette, 32, 15);
+    ScreenSyncFadePaletteToViewport(pScr);
     viewUpdateGlobalPalette(pScr->_pView);
     ScreenUpdate();
 }
@@ -768,22 +767,9 @@ static void gameGsCreate(void)
     {
         pPalRef[p + 64] = s_aTextPalette[p];
     }
-    
- 
-    
-    // // Sync the modified palette from fade reference back to viewport palette
-    // // viewUpdateGlobalPalette() reads from pView->pFirstVPort->pPalette, not from pFade->pPaletteRef
-    // // For AGA (8bpp), we have 256 colors (ULONG entries)
-    // ULONG *pVPortPal = (ULONG *)pScreen->_pView->pFirstVPort->pPalette;
-    // ULONG *pFadePal = (ULONG *)pScreen->_pFade->pPaletteRef;
-    // for (int i = 0; i < 256; i++)
-    // {
-    //     pVPortPal[i] = pFadePal[i];
-    // }
-    
-    // // Update the hardware palette registers
-    // 
-    
+
+    ScreenSyncFadePaletteToViewport(pScreen);
+
 #ifdef ACE_USE_AGA_FEATURES
     // Set sprite palette banks to use text palette (bank 4 = colors 64-79)
     // Mouse pointer uses channels 0 (even) and 1 (odd), both set to bank 4
@@ -868,8 +854,9 @@ static void gameGsLoop(void)
             tMonster* monster = g_pGameState->m_pMonsterList->_monsters[i];
             if (monster && monster->_state != MONSTER_STATE_DEAD) {
                 // Update monster state
-                monsterUpdate(monster, g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty,
-                    g_pGameState->m_pMonsterList);
+                if (monsterUpdate(monster, g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty,
+                        g_pGameState->m_pMonsterList))
+                    g_ubRedrawRequire = 2;
 
                 // Check for combat
                 if (monster->_state == MONSTER_STATE_AGGRESSIVE) {

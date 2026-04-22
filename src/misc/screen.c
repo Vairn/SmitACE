@@ -6,6 +6,7 @@
 #include <ace/managers/memory.h>
 #include <ace/macros.h>
 #include <ace/managers/sprite.h>
+#include <ace/utils/palette.h>
 
 #include "mouse_pointer.h"
 
@@ -80,6 +81,29 @@ tScreen *ScreenGetActive(void)
     }
 
     return g_pCurrentScreen;
+}
+
+void ScreenSyncFadePaletteToViewport(tScreen *pScreen)
+{
+    if (!pScreen || !pScreen->_pFade || !pScreen->_pView || !pScreen->_pView->pFirstVPort)
+        return;
+#ifdef ACE_USE_AGA_FEATURES
+    if (pScreen->_pView->pFirstVPort->eFlags & VP_FLAG_AGA) {
+        paletteDimAGA(
+            (ULONG *)pScreen->_pFade->pPaletteRef,
+            (ULONG *)pScreen->_pView->pFirstVPort->pPalette,
+            pScreen->_pFade->ubColorCount, 255);
+    } else
+#endif
+    {
+        UBYTE cnt = pScreen->_pFade->ubColorCount;
+        if (cnt > 32)
+            cnt = 32;
+        paletteDim(
+            (UWORD *)pScreen->_pFade->pPaletteRef,
+            (volatile UWORD *)pScreen->_pView->pFirstVPort->pPalette,
+            cnt, 15);
+    }
 }
 
 void ScreenUpdate(void)

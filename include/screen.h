@@ -53,6 +53,9 @@ void ScreenFadePalette(LONG delay, void* pFunc);
 
 void ScreenFadeFromBlack(UWORD* pal,LONG delay, void *upFunc);
 void ScreenFadeToBlack(UWORD* pal,LONG delay, void *upFunc);
+
+/** Copy pFade->pPaletteRef into the viewport palette (what viewUpdateGlobalPalette / Copper use). */
+void ScreenSyncFadePaletteToViewport(tScreen *pScreen);
 UWORD* ScreenGetPalette();
 void ScreenClose();
 #endif // AMIGA

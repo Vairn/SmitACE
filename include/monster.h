@@ -54,7 +54,8 @@ tMonsterList* monsterListCreate();
 void monsterListDestroy(tMonsterList* monsterList);
 
 // Monster behavior
-void monsterUpdate(tMonster* monster, tMaze* maze, tCharacterParty* party, tMonsterList* allMonsters);
+/** @return non-zero if monster changed map cell this tick (caller may need to refresh the view). */
+UBYTE monsterUpdate(tMonster* monster, tMaze* maze, tCharacterParty* party, tMonsterList* allMonsters);
 void monsterAttack(tMonster* monster, tCharacter* target);
 /** Melee strike from party member (after monster's attack). */
 void monsterTakeDamageFromCharacter(tMonster* monster, tCharacter* attacker);
