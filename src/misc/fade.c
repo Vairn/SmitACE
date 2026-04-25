@@ -6,12 +6,12 @@
 #include <ace/utils/palette.h>
 #include <ace/managers/ptplayer.h>
 
-tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
+tFade *fadeCreate(tView *pView, UWORD *pPalette, UWORD uwColorCount)
 {
 	tFade *pFade = memAllocFastClear(sizeof(*pFade));
 	pFade->eState = FADE_STATE_IDLE;
 	pFade->pView = pView;
-	pFade->ubColorCount = ubColorCount;
+	pFade->uwColorCount = uwColorCount;
 	
 	// Check viewport flags for AGA, not view flags (VP_FLAG_AGA != VIEW_FLAG_GLOBAL_AGA)
 	if (pView->pFirstVPort->eFlags & VP_FLAG_AGA)
@@ -22,7 +22,7 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 		// For AGA, copy as ULONGs (24-bit colors), not UWORDs
 		ULONG *pDest = (ULONG *)pFade->pPaletteRef;
 		ULONG *pSrc = (ULONG *)pPalette;
-		for (UWORD i = 0; i < ubColorCount; ++i)
+		for (UWORD i = 0; i < uwColorCount; ++i)
 		{
 			pDest[i] = pSrc[i];
 		}
@@ -32,7 +32,7 @@ tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount)
 		pFade->pPaletteRef = memAllocFastClear(sizeof(UWORD) * 32);
 		
 		// For OCS/ECS, copy as UWORDs (12-bit colors)
-		for (UBYTE i = 0; i < ubColorCount; ++i)
+		for (UWORD i = 0; i < uwColorCount; ++i)
 		{
 			pFade->pPaletteRef[i] = pPalette[i];
 		}
@@ -94,14 +94,14 @@ tFadeState fadeProcess(tFade *pFade)
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
 			paletteDimAGA(
 				(ULONG *)pFade->pPaletteRef, (ULONG *)pFade->pView->pFirstVPort->pPalette,
-				pFade->ubColorCount, ubRatio);
+				pFade->uwColorCount, ubRatio);
 		}
 		else
 		{
 			UBYTE ubRatio = (15 * ubCnt) / pFade->ubCntEnd;
 			paletteDim(
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
-				pFade->ubColorCount, ubRatio);
+				pFade->uwColorCount, ubRatio);
 		}
 		viewUpdateGlobalPalette(pFade->pView);
 		UBYTE ubVolume = (64 * ubCnt) / pFade->ubCntEnd;

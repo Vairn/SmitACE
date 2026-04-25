@@ -208,18 +208,23 @@ void doorButtonRender(tDoorButton* pButton, tWallset* pWallset, tBitMap* pBuffer
     tWallGfx* pGfx = doorButtonGfxForSlot(pButton, pWallset, slotTx, slotTy);
     if (pGfx && pGfx->_setIndex < pWallset->_gfxCount)
     {
+        UWORD si = pGfx->_setIndex;
+        tBitMap *g = pWallset->_gfx[si];
+        tBitMap *m = pWallset->_mask[si];
+        if (g && m) {
         UWORD frameOffset = 0;
         if (pButton->_state == DOORBUTTON_STATE_ON || pButton->_state == DOORBUTTON_STATE_PRESSED)
             frameOffset = pGfx->_height;
         blitUnsafeCopyMask(
-            pWallset->_gfx[pGfx->_setIndex],
+            g,
             pGfx->_x, pGfx->_y + frameOffset,
             pBuffer,
             pGfx->_screen[0] + SOFFX, pGfx->_screen[1] + SOFFX,
             pGfx->_width, pGfx->_height,
-            (UBYTE *)pWallset->_mask[pGfx->_setIndex]->Planes[0]
+            (UBYTE *)m->Planes[0]
         );
         return;
+        }
     }
     UBYTE on = (pButton->_state == DOORBUTTON_STATE_ON || pButton->_state == DOORBUTTON_STATE_PRESSED);
     wallInteractablePlaceholderDraw(pBuffer, pWallset, slotTx, slotTy,

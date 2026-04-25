@@ -8,8 +8,8 @@
 #include <string.h>
 
 #define MONSTER_DEF_MAX 64
-/** Game ticks between monster move attempts (one cell when a move succeeds). */
-#define MONSTER_MOVE_PERIOD 10
+/** Seconds between monster move attempts (monsterUpdate runs on the ~1 Hz world tick). */
+#define MONSTER_MOVE_PERIOD 2
 
 typedef struct {
 	UBYTE ubLevel;
@@ -363,13 +363,13 @@ tMonster* monsterCreate(UBYTE monsterType)
 		return NULL;
 	if (s_defCount > 0 && monsterType < s_defCount) {
 		monsterApplyDef(monster, monsterType, &s_defs[monsterType]);
-		monster->_moveCooldown = (UBYTE)(1 + (simpleRandByte() % 24));
+		monster->_moveCooldown = (UBYTE)(simpleRandByte() % 6);
 		logWrite("monsterCreate: type=%u (table) hp=%u/%u\n", (unsigned)monsterType,
 			(unsigned)monster->_base._HP, (unsigned)monster->_base._MaxHP);
 		return monster;
 	}
 	monsterCreateLegacySwitch(monster, monsterType);
-	monster->_moveCooldown = (UBYTE)(1 + (simpleRandByte() % 24));
+	monster->_moveCooldown = (UBYTE)(simpleRandByte() % 6);
 	logWrite("monsterCreate: type=%u (legacy) hp=%u/%u\n", (unsigned)monsterType,
 		(unsigned)monster->_base._HP, (unsigned)monster->_base._MaxHP);
 	return monster;

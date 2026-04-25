@@ -5,7 +5,7 @@ project(Smite LANGUAGES ASM C)
 #set(M68K_CPU "68020" CACHE STRING "Target CPU model" FORCE)
 
 #set(CMAKE_C_STANDARD 17)
-file(GLOB_RECURSE SOURCES src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
+file(GLOB_RECURSE SOURCES CONFIGURE_DEPENDS src/*.c src/game/*.c src/misc/*.c src/maze/*.c src/gfx/*.c include/*.h)
 set(ACE_USE_AGA_FEATURES ON)
 set(ACE_USE_ECS_FEATURES ON)
 set(ACE_DEBUG_UAE ON)

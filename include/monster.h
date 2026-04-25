@@ -33,7 +33,7 @@ typedef struct _monster
     UWORD _experienceValue; // XP given when defeated
     UBYTE _partyPosX;
     UBYTE _partyPosY;
-    /** Ticks until next move attempt (staggered at spawn). */
+    /** Seconds until next move attempt (world runs ~1 Hz; staggered at spawn). */
     UBYTE _moveCooldown;
 } tMonster;
 

@@ -220,14 +220,18 @@ UBYTE renderDoor(tWallset *pWallset, tMaze *pMaze, tBitMap *pCurrentBuffer,
         
         if (heightRatio > 0) {  // Skip if door is fully open
             doorHeight = (doorHeight * heightRatio) / 16;
-            
+            UWORD si = pWallset->_tileset[doorW]->_setIndex;
+            tBitMap *g = (si < pWallset->_gfxCount) ? pWallset->_gfx[si] : NULL;
+            tBitMap *m = (si < pWallset->_gfxCount) ? pWallset->_mask[si] : NULL;
+            if (g && m) {
             // Draw the door
-            blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[doorW]->_setIndex],
+            blitUnsafeCopyMask(g,
                              pWallset->_tileset[doorW]->_x, pWallset->_tileset[doorW]->_y + yOffset,
                              pCurrentBuffer,
                              pWallset->_tileset[doorW]->_screen[0] + SOFFX, pWallset->_tileset[doorW]->_screen[1] + SOFFX + yOffset,
                              pWallset->_tileset[doorW]->_width, doorHeight,
-                             (UBYTE *)pWallset->_mask[pWallset->_tileset[doorW]->_setIndex]->Planes[0]);
+                             (UBYTE *)m->Planes[0]);
+            }
             return 1; // Animation frame was drawn
         }
     }
@@ -557,13 +561,17 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
                 {
                     UBYTE doorWidth = pWallset->_tileset[w]->_width;
                     UBYTE doorHeight = pWallset->_tileset[w]->_height;
-
-                    blitUnsafeCopyMask(pWallset->_gfx[pWallset->_tileset[w]->_setIndex],
+                    UWORD si2 = pWallset->_tileset[w]->_setIndex;
+                    tBitMap *g2 = (si2 < pWallset->_gfxCount) ? pWallset->_gfx[si2] : NULL;
+                    tBitMap *m2 = (si2 < pWallset->_gfxCount) ? pWallset->_mask[si2] : NULL;
+                    if (g2 && m2) {
+                    blitUnsafeCopyMask(g2,
                                        pWallset->_tileset[w]->_x, pWallset->_tileset[w]->_y,
                                        pCurrentBuffer,
                                        pWallset->_tileset[w]->_screen[0] + SOFFX, pWallset->_tileset[w]->_screen[1] + SOFFX,
                                        doorWidth, doorHeight,
-                                       (UBYTE *)pWallset->_mask[pWallset->_tileset[w]->_setIndex]->Planes[0]);
+                                       (UBYTE *)m2->Planes[0]);
+                    }
                 }
             }
         }

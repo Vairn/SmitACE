@@ -1,5 +1,6 @@
 #include "wallset.h"
 #include <ace/utils/file.h>
+#include <ace/managers/log.h>
 #include <ace/managers/memory.h>
 #include <ace/utils/bitmap.h>
 #include "gfx_util.h"
@@ -150,6 +151,28 @@ tWallset *wallsetLoad(const char *fileName)
 
 			pWallset->_gfx[ts] = bitmapCreateFromPath(gfxPath, 0);
 			pWallset->_mask[ts] = bitmapCreateFromPath(maskPath, 0);
+			if (!pWallset->_gfx[ts] || !pWallset->_mask[ts]) {
+				logWrite(
+					"ERR: wallset missing gfx/mask: '%s' / '%s'\n",
+					gfxPath, maskPath
+				);
+			}
+		}
+
+		/* If set 0 files are absent, borrow first loaded set so blits are never null. */
+		if (tilesetCount > 0) {
+			if (!pWallset->_gfx[0] || !pWallset->_mask[0]) {
+				for (UWORD t = 1; t < (UWORD)tilesetCount; t++) {
+					if (pWallset->_gfx[t] && pWallset->_mask[t]) {
+						pWallset->_gfx[0] = pWallset->_gfx[t];
+						pWallset->_mask[0] = pWallset->_mask[t];
+						logWrite(
+							"WARN: wallset: tileset 0 missing; using set %u gfx/mask as fallback\n", t
+						);
+						break;
+					}
+				}
+			}
 		}
 
 		systemUnuse();
@@ -241,15 +264,31 @@ void wallsetSave(tWallset *pWallset, const char *fileName)
 	systemUnuse();
 }
 
+static void wallsetDestroyBitmapListUnique(tBitMap** pp, UWORD count)
+{
+	for (UWORD ts = 0; ts < count; ts++) {
+		tBitMap *b = pp[ts];
+		if (!b)
+			continue;
+		UBYTE dup = 0;
+		for (UWORD u = 0; u < ts; u++) {
+			if (pp[u] == b) {
+				dup = 1;
+				break;
+			}
+		}
+		if (!dup)
+			bitmapDestroy(b);
+	}
+}
+
 void wallsetDestroy(tWallset* pWallset)
 {
 	if (pWallset == NULL)
 		return;
 
-	for (UWORD ts=0; ts<pWallset->_gfxCount; ts++) {
-		bitmapDestroy(pWallset->_gfx[ts]);
-		bitmapDestroy(pWallset->_mask[ts]);
-	}
+	wallsetDestroyBitmapListUnique(pWallset->_gfx, pWallset->_gfxCount);
+	wallsetDestroyBitmapListUnique(pWallset->_mask, pWallset->_gfxCount);
 	memFree(pWallset->_gfx,sizeof(tBitMap*)*pWallset->_gfxCount);
 	memFree(pWallset->_mask,sizeof(tBitMap*)*pWallset->_gfxCount);
 

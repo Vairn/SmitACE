@@ -38,7 +38,7 @@ tScreen *CreateNewScreen(BYTE palCount)
                                                TAG_SIMPLEBUFFER_USE_X_SCROLLING, 0,
                                                TAG_END);
 
-        pNewScreen->_pFade = fadeCreate(pNewScreen->_pView, pNewScreen->_pView->pFirstVPort->pPalette, 255);
+        pNewScreen->_pFade = fadeCreate(pNewScreen->_pView, pNewScreen->_pView->pFirstVPort->pPalette, 256);
 
     spriteManagerCreate(pNewScreen->_pView, 0, NULL);
     systemSetDmaBit(DMAB_SPRITE, 1);
@@ -92,11 +92,11 @@ void ScreenSyncFadePaletteToViewport(tScreen *pScreen)
         paletteDimAGA(
             (ULONG *)pScreen->_pFade->pPaletteRef,
             (ULONG *)pScreen->_pView->pFirstVPort->pPalette,
-            pScreen->_pFade->ubColorCount, 255);
+            pScreen->_pFade->uwColorCount, 255);
     } else
 #endif
     {
-        UBYTE cnt = pScreen->_pFade->ubColorCount;
+        UWORD cnt = pScreen->_pFade->uwColorCount;
         if (cnt > 32)
             cnt = 32;
         paletteDim(

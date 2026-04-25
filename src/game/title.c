@@ -108,7 +108,7 @@ static void titleGsCreate(void)
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoadFromPath("data/title.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	paletteLoadFromPath("data/title.plt", g_pMainScreen->_pFade->pPaletteRef, 256);
 	tBitMap *pLogo = bitmapCreateFromPath("data/title.bm", 0);
 	blitCopy(
 		pLogo, 0, 0, g_pMainScreen->_pBfr->pBack,

@@ -24,6 +24,7 @@
 #include "pressure_plate.h"
 #include "wallset.h"
 #include "game_manifest.h"
+#include "game_time.h"
 
 #include "game_ui.h"
 #include "game_ui_regions.h"
@@ -47,6 +48,30 @@ void srand(ULONG new_seed)
 
 tScreen *pScreen = NULL;
 tWallset *pWallset = NULL;
+
+/**
+ * AGA: write wallset RGB triples into palette indices 32-63 (fade buffer / hardware order).
+ * Never reads past pWll->_palette*3; clears unused 32-63 entries to black.
+ */
+static void gameCopyWallsetColorsToPalRef(ULONG *pPalRef, tWallset *pWll)
+{
+	if (!pWll || !pWll->_palette || !pPalRef) {
+		return;
+	}
+	UWORD n = pWll->_paletteSize;
+	if (n > 32) {
+		n = 32;
+	}
+	for (UWORD p = 0; p < n; p++) {
+		pPalRef[p + 32] =
+			(ULONG)pWll->_palette[3u * p] << 16
+			| (ULONG)pWll->_palette[3u * p + 1] << 8
+			| (ULONG)pWll->_palette[3u * p + 2];
+	}
+	for (UWORD p = n; p < 32; p++) {
+		pPalRef[p + 32] = 0x000000;
+	}
+}
 tBitMap *pBackground = NULL;
 
 static ULONG s_ulSampleSize;
@@ -635,6 +660,7 @@ static void fadeCompleteNoBat(void)
 static void fadeInComplete(void)
 {
     g_ubGameActive = 1;
+    gameTimeReset1s();
 }
 
 static void gameReloadPalette(void)
@@ -647,14 +673,14 @@ static void gameReloadPalette(void)
         const char *plt = gameManifestGet()->uiPalettePath;
         if (!plt || !plt[0])
             plt = "data/playfield.plt";
-        paletteLoadFromPath(plt, pScr->_pFade->pPaletteRef, 32);
+        /* Full 256: avoid stale AGA entries in fade buffer after other states. */
+        paletteLoadFromPath(plt, pScr->_pFade->pPaletteRef, 256);
     }
 
 #ifdef ACE_USE_AGA_FEATURES
     if (pScr->_pView->pFirstVPort->eFlags & VP_FLAG_AGA) {
         ULONG *pPalRef = (ULONG *)pScr->_pFade->pPaletteRef;
-        for (int p = 0; p < 32; p++)
-            pPalRef[p + 32] = pWll->_palette[3 * p] << 16 | pWll->_palette[(3 * p) + 1] << 8 | pWll->_palette[(3 * p) + 2];
+        gameCopyWallsetColorsToPalRef(pPalRef, pWll);
         static const ULONG s_aTextPalette[32] = {
             0x000000, 0x1A1A1A, 0x333333, 0x4D4D4D, 0x666666, 0x808080, 0x999999, 0xB3B3B3,
             0xFFFFFF, 0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF, 0xFF8000,
@@ -707,17 +733,14 @@ static void gameGsCreate(void)
         const char *plt = gameManifestGet()->uiPalettePath;
         if (!plt || !plt[0])
             plt = "data/playfield.plt";
-        paletteLoadFromPath(plt, pScreen->_pFade->pPaletteRef, 32);
+        paletteLoadFromPath(plt, pScreen->_pFade->pPaletteRef, 256);
     }
 
     // Load wallset palette into colors 32-63 to avoid conflict with UI colors (0-31)
     // The wallset graphics will be drawn with bitplane 5 set, shifting them to 32-63 range
     ULONG *pPalRef = (ULONG *)pScreen->_pFade->pPaletteRef;
-    for (int p = 0; p < 32; p++)
-    {
-        pPalRef[p + 32] = pWallset->_palette[3 * p] << 16 | pWallset->_palette[(3 * p) + 1] << 8 | pWallset->_palette[(3 * p + 2)];
-    }
-    
+    gameCopyWallsetColorsToPalRef(pPalRef, pWallset);
+
     // Load text palette into colors 64-95 for viewport text
     // 32 colors optimized for text readability on dark backgrounds
     static const ULONG s_aTextPalette[32] = {
@@ -811,6 +834,36 @@ static void gameGsCreate(void)
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
 }
 
+/** Runs every frame: melee while party shares a cell with an aggressive monster (outside the ~1 Hz world tick). */
+static void gameProcessMeleeCombat(void)
+{
+    for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
+        tMonster *monster = g_pGameState->m_pMonsterList->_monsters[i];
+        if (!monster || monster->_state == MONSTER_STATE_DEAD)
+            continue;
+        if (monster->_state != MONSTER_STATE_AGGRESSIVE)
+            continue;
+        if (monster->_partyPosX != g_pGameState->m_pCurrentParty->_PartyX ||
+            monster->_partyPosY != g_pGameState->m_pCurrentParty->_PartyY)
+            continue;
+        if (g_pGameState->m_pCurrentParty->_numCharacters <= 0)
+            continue;
+        tCharacter *hero = g_pGameState->m_pCurrentParty->_characters[0];
+        monsterAttack(monster, hero);
+        if (hero->_HP > 0 && monster->_state != MONSTER_STATE_DEAD)
+            monsterTakeDamageFromCharacter(monster, hero);
+        if (monster->_base._HP == 0) {
+            monster->_state = MONSTER_STATE_DEAD;
+            monsterDropLoot(monster, g_pGameState->m_pInventory);
+            for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
+                if (g_pGameState->m_pCurrentParty->_characters[j])
+                    g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
+            }
+            g_ubRedrawRequire = 2;
+        }
+    }
+}
+
 static void gameGsLoop(void)
 {
     if (g_ubGameActive)
@@ -849,38 +902,22 @@ static void gameGsLoop(void)
         // Check if standing on event triggers (e.g., battery chargers)
         updateStandingOnEventTrigger();
 
-        // Update monsters
-        for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
-            tMonster* monster = g_pGameState->m_pMonsterList->_monsters[i];
-            if (monster && monster->_state != MONSTER_STATE_DEAD) {
-                // Update monster state
+        /* Player movement / turning stays per-frame below; world AI matches ~1 Hz game clock. */
+        if (gameTimeCheck1s()) {
+            UBYTE ubWorldNeedsRedraw = 0;
+            for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
+                tMonster *monster = g_pGameState->m_pMonsterList->_monsters[i];
+                if (!monster || monster->_state == MONSTER_STATE_DEAD)
+                    continue;
                 if (monsterUpdate(monster, g_pGameState->m_pCurrentMaze, g_pGameState->m_pCurrentParty,
                         g_pGameState->m_pMonsterList))
-                    g_ubRedrawRequire = 2;
-
-                // Check for combat
-                if (monster->_state == MONSTER_STATE_AGGRESSIVE) {
-                    // If monster is in same cell as party, initiate combat
-                    if (monster->_partyPosX == g_pGameState->m_pCurrentParty->_PartyX &&
-                        monster->_partyPosY == g_pGameState->m_pCurrentParty->_PartyY) {
-                        if (g_pGameState->m_pCurrentParty->_numCharacters > 0) {
-                            tCharacter* hero = g_pGameState->m_pCurrentParty->_characters[0];
-                            monsterAttack(monster, hero);
-                            if (hero->_HP > 0 && monster->_state != MONSTER_STATE_DEAD)
-                                monsterTakeDamageFromCharacter(monster, hero);
-                            if (monster->_base._HP == 0) {
-                                monster->_state = MONSTER_STATE_DEAD;
-                                monsterDropLoot(monster, g_pGameState->m_pInventory);
-                                for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
-                                    if (g_pGameState->m_pCurrentParty->_characters[j])
-                                        g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
-                                }
-                            }
-                        }
-                    }
-                }
+                    ubWorldNeedsRedraw = 1;
             }
+            if (ubWorldNeedsRedraw)
+                g_ubRedrawRequire = 2;
         }
+
+        gameProcessMeleeCombat();
 
         if (g_ubRedrawRequire)
         {

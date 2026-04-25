@@ -23,7 +23,7 @@ static void winGsCreate(void)
 
 	g_pMainScreen = ScreenGetActive();
 	// UWORD pPaletteRef[256];
-	paletteLoadFromPath("data/Win.plt", g_pMainScreen->_pFade->pPaletteRef, 255);
+	paletteLoadFromPath("data/Win.plt", g_pMainScreen->_pFade->pPaletteRef, 256);
 
 	tBitMap *pLogo = bitmapCreateFromPath("data/Win_i.bm", 0);
 	

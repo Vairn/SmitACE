@@ -19,7 +19,7 @@ typedef void (*tCbFadeOnDone)(void);
 
 typedef struct _tFade {
 	tFadeState eState;  // 4 bytes (enum, int-sized on 68000/68020)
-	UBYTE ubColorCount;
+	UWORD uwColorCount;
 	UBYTE ubCnt;
 	UBYTE ubCntEnd;
 	UBYTE _pad;   // Padding to ensure pointers are 4-byte aligned for 68020+
@@ -29,7 +29,7 @@ typedef struct _tFade {
 	tView *pView;
 } tFade;
 
-tFade *fadeCreate(tView *pView, UWORD *pPalette, UBYTE ubColorCount);
+tFade *fadeCreate(tView *pView, UWORD *pPalette, UWORD uwColorCount);
 
 void fadeDestroy(tFade *pFade);
 
