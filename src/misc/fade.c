@@ -92,14 +92,14 @@ tFadeState fadeProcess(tFade *pFade)
 		if (pFade->pView->pFirstVPort->eFlags & VP_FLAG_AGA)
 		{
 			UBYTE ubRatio = (255 * ubCnt) / pFade->ubCntEnd;
-			paletteDimAGA(
+			paletteDimAga(
 				(ULONG *)pFade->pPaletteRef, (ULONG *)pFade->pView->pFirstVPort->pPalette,
 				pFade->uwColorCount, ubRatio);
 		}
 		else
 		{
 			UBYTE ubRatio = (15 * ubCnt) / pFade->ubCntEnd;
-			paletteDim(
+			paletteDimOcs(
 				pFade->pPaletteRef, pFade->pView->pFirstVPort->pPalette,
 				pFade->uwColorCount, ubRatio);
 		}

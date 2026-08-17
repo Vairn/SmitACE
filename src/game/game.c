@@ -1,5 +1,6 @@
 #include "game.h"
 
+#include <ace/managers/log.h>
 #include <ace/managers/mouse.h>
 #include <ace/managers/key.h>
 #include <ace/managers/joy.h>
@@ -25,6 +26,9 @@
 #include "wallset.h"
 #include "game_manifest.h"
 #include "game_time.h"
+#ifdef ACE_HOST
+#include <host_os.h>
+#endif
 
 #include "game_ui.h"
 #include "game_ui_regions.h"
@@ -32,9 +36,10 @@
 #include "item.h"
 #include "text_render.h"
 #include <string.h>
-ULONG seed = 1;
 #define SOFFX 5
 UBYTE s_lastMoveResult = 0;
+#ifndef ACE_HOST
+ULONG seed = 1;
 ULONG rand()
 {
     seed = (seed * 1103515245 + 12345) & 0x7fffffff;
@@ -45,6 +50,7 @@ void srand(ULONG new_seed)
 {
     seed = new_seed;
 }
+#endif
 
 tScreen *pScreen = NULL;
 tWallset *pWallset = NULL;
@@ -334,8 +340,30 @@ void handleMapClicked(void)
     g_ubRedrawRequire = 2;
 }
 
+/** Non-zero if a step/turn is allowed; consumes the cooldown when it is. */
+static UBYTE gameConsumePartyAction(void)
+{
+#ifdef ACE_HOST
+	/* Wall-clock gate: host loop rate is not a reliable 50 Hz VBL. */
+	static uint64_t s_nextAllowed = 0;
+	uint64_t now = hostOsClockTicks();
+	uint64_t freq = hostOsClockFreq();
+	if (!freq)
+		freq = 1000u;
+	if (now < s_nextAllowed)
+		return 0;
+	s_nextAllowed = now + (freq * GAME_STEP_TICKS) / GAME_TIME_TICKS_PER_SEC;
+	return 1;
+#else
+	static ULONG s_ulLastStep = 0;
+	return gameTimeCheckPeriod(&s_ulLastStep, GAME_STEP_TICKS);
+#endif
+}
+
 void TurnRight()
 {
+    if (!gameConsumePartyAction())
+        return;
     g_pGameState->m_pCurrentParty->_PartyFacing++;
     g_pGameState->m_pCurrentParty->_PartyFacing %= 4;
     g_ubRedrawRequire = 2;
@@ -343,6 +371,8 @@ void TurnRight()
 
 void TurnLeft()
 {
+    if (!gameConsumePartyAction())
+        return;
     g_pGameState->m_pCurrentParty->_PartyFacing = (g_pGameState->m_pCurrentParty->_PartyFacing + 3) % 4;
     g_ubRedrawRequire = 2;
 }
@@ -390,6 +420,8 @@ static void updateStandingOnEventTrigger(void)
 
 void MoveRight()
 {
+    if (!gameConsumePartyAction())
+        return;
     // Clear viewport message when moving
     clearViewportMessage();
     
@@ -402,6 +434,8 @@ void MoveRight()
 
 void MoveLeft()
 {
+    if (!gameConsumePartyAction())
+        return;
     // Clear viewport message when moving
     clearViewportMessage();
     
@@ -414,6 +448,8 @@ void MoveLeft()
 
 void MoveBackwards()
 {
+    if (!gameConsumePartyAction())
+        return;
     // Clear viewport message when moving
     clearViewportMessage();
     
@@ -426,6 +462,8 @@ void MoveBackwards()
 
 void MoveForwards()
 {
+    if (!gameConsumePartyAction())
+        return;
     // Clear viewport message when moving
     clearViewportMessage();
     
@@ -704,6 +742,7 @@ static void fadeCompleteReloadPalette(void)
 
 static void gameGsCreate(void)
 {
+    logBlockBegin("gameGsCreate()");
     systemUse();
     if (g_ubGameStateLoadedFromFile) {
         g_ubGameStateLoadedFromFile = 0;
@@ -712,6 +751,7 @@ static void gameGsCreate(void)
     } else {
         if (!InitNewGame()) {
             systemUnuse();
+            logBlockEnd("gameGsCreate()");
             return;
         }
         pScreen = ScreenGetActive();
@@ -719,6 +759,7 @@ static void gameGsCreate(void)
             UBYTE startLv = gameManifestGet()->startLevel;
             if (!LoadLevel((BYTE)startLv)) {
                 systemUnuse();
+                logBlockEnd("gameGsCreate()");
                 return;
             }
         }
@@ -796,8 +837,8 @@ static void gameGsCreate(void)
 #ifdef ACE_USE_AGA_FEATURES
     // Set sprite palette banks to use text palette (bank 4 = colors 64-79)
     // Mouse pointer uses channels 0 (even) and 1 (odd), both set to bank 4
-    spriteSetEvenColourPaletteBank(4);  // Channel 0 uses colors 64-79
-    spriteSetOddColourPaletteBank(4);   // Channel 1 uses colors 64-79
+    spriteSetEvenColorPaletteBank(4);  // Channel 0 uses colors 64-79
+    spriteSetOddColorPaletteBank(4);   // Channel 1 uses colors 64-79
 #endif
     
     pMod = ptplayerModCreateFromPath("data/suspense.mod");
@@ -832,6 +873,7 @@ static void gameGsCreate(void)
     viewUpdateGlobalPalette(pScreen->_pView);
     ScreenUpdate();
     ScreenFadeFromBlack(NULL, 7, fadeInComplete); // 7 is the speed of the fade
+    logBlockEnd("gameGsCreate()");
 }
 
 /** Runs every frame: melee while party shares a cell with an aggressive monster (outside the ~1 Hz world tick). */
@@ -1385,11 +1427,15 @@ static void gameGsDestroy(void)
         fontDestroy(s_pTestFont);
         s_pTestFont = NULL;
     }
+    if (pMod) {
+        ptplayerEnableMusic(0);
+        ptplayerModDestroy(pMod);
+        pMod = NULL;
+    }
     s_ubTextRendererInitialized = 0;
     
     gameUIDestroy();
     FreeGameState();
-    systemUnuse();
 }
 tState g_sStateGame = {
     .cbCreate = gameGsCreate, .cbLoop = gameGsLoop, .cbDestroy = gameGsDestroy};

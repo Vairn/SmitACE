@@ -50,6 +50,10 @@
 		"disk_file_private.h": "c"
 	},
 	"cmake.configureOnOpen": false,
+	"cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}",
+	"[m68k]": {
+		"editor.rulers": []
+	},
 	// //"cmake.buildDirectory": "${workspaceFolder}/amiga"
 	// "cmake.configureSettings": {
 	// 	"CMAKE_TOOLCHAIN_FILE" : "C:/Users/Amiga/AmigaDev/LandsOfLore/deps/vcpkg/scripts/buildsystems/vcpkg.cmake"

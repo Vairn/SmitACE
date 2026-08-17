@@ -56,6 +56,51 @@
 				"cwd": "${workspaceFolder}/build"
 			},
 			"problemMatcher": []
+		},
+		{
+			"label": "configure native",
+			"type": "shell",
+			"command": "cmake",
+			"group": "build",
+			"args": [
+				"-S",
+				"${workspaceFolder}",
+				"-B",
+				"${workspaceFolder}/build/Native",
+				"-G",
+				"Ninja",
+				"-DACE_HOST=ON",
+				"-DACE_DEBUG=ON",
+				"-DACE_DEBUG_UAE=ON",
+				"-DACE_HOST_DEBUG=ON",
+				"-DCMAKE_BUILD_TYPE=Debug",
+				"-DCMAKE_PREFIX_PATH=C:/msys64/ucrt64",
+				"-DCMAKE_C_COMPILER=C:/msys64/ucrt64/bin/gcc.exe"
+			],
+			"options": {
+				"env": {
+					"PATH": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "build native",
+			"type": "shell",
+			"command": "cmake",
+			"group": "build",
+			"dependsOn": ["configure native"],
+			"args": [
+				"--build",
+				"${workspaceFolder}/build/Native",
+				"--parallel"
+			],
+			"options": {
+				"env": {
+					"PATH": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			},
+			"problemMatcher": ["$gcc"]
 		}
 	]
 }

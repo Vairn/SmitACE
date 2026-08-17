@@ -6,21 +6,6 @@
 #include <ace/utils/file.h>
 #include <ace/utils/disk_file.h>
 
-static UWORD mazeReadU16Be(tFile *pFile)
-{
-	UBYTE b[2];
-	fileRead(pFile, b, 2);
-	return ((UWORD)b[0] << 8) | (UWORD)b[1];
-}
-
-static void mazeWriteU16Be(tFile *pFile, UWORD v)
-{
-	UBYTE b[2];
-	b[0] = (UBYTE)(v >> 8);
-	b[1] = (UBYTE)v;
-	fileWrite(pFile, b, 2);
-}
-
 unsigned char demomap[] = {
   
   1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
@@ -128,13 +113,13 @@ tMaze* mazeLoad(const char* filename)
         UBYTE height = 0;
         UWORD eventCount = 0;
         UWORD stringCount = 0;
-        fileRead(pFile, &width, 1);
-        fileRead(pFile, &height, 1);
+        fileReadBytes(pFile, &width, 1);
+        fileReadBytes(pFile, &height, 1);
         tMaze* pMaze = mazeCreate(width, height);
-        fileRead(pFile, pMaze->_mazeData, width * height);
-        fileRead(pFile, pMaze->_mazeCol, width * height);
-        fileRead(pFile, pMaze->_mazeFloor, width * height);
-        eventCount = mazeReadU16Be(pFile);
+        fileReadBytes(pFile, pMaze->_mazeData, width * height);
+        fileReadBytes(pFile, pMaze->_mazeCol, width * height);
+        fileReadBytes(pFile, pMaze->_mazeFloor, width * height);
+        fileReadWords(pFile, &eventCount, 1);
         
         for (int i = 0; i < eventCount; i++) {
             UBYTE x = 0;
@@ -142,24 +127,24 @@ tMaze* mazeLoad(const char* filename)
             UBYTE eventType = 0;
             UBYTE eventDataSize = 0;
             UBYTE* eventData = NULL;
-            fileRead(pFile, &x, 1);
-            fileRead(pFile, &y, 1);
-            fileRead(pFile, &eventType, 1);
-            fileRead(pFile, &eventDataSize, 1);
+            fileReadBytes(pFile, &x, 1);
+            fileReadBytes(pFile, &y, 1);
+            fileReadBytes(pFile, &eventType, 1);
+            fileReadBytes(pFile, &eventDataSize, 1);
             if (eventDataSize > 0) {
                 eventData = (UBYTE*)memAllocFastClear(eventDataSize);
-                fileRead(pFile, eventData, eventDataSize);
+                fileReadBytes(pFile, eventData, eventDataSize);
             }
             tMazeEvent* event = mazeEventCreate(x, y, eventType, eventDataSize, eventData);
             mazeAppendEvent(pMaze, event);
         }
-        stringCount = mazeReadU16Be(pFile);
+        fileReadWords(pFile, &stringCount, 1);
         for (int i = 0; i < stringCount; i++) {
             UWORD length = 0;
-            UBYTE* string = 0;
-            length = mazeReadU16Be(pFile);
-            string = (UBYTE*)memAllocFastClear(length);
-            fileRead(pFile, string, length);
+            char* string = 0;
+            fileReadWords(pFile, &length, 1);
+            string = (char*)memAllocFastClear(length);
+            fileReadBytes(pFile, (UBYTE*)string, length);
             //tMazeString* mazeString = mazeStringCreate(length, string);
             mazeAddString(pMaze, string, length);
             memFree(string, length);
@@ -175,27 +160,27 @@ void mazeSave(tMaze* pMaze, const char* sFilename)
     tFile* pFile = diskFileOpen(sFilename, DISK_FILE_MODE_WRITE, 1);
     if (pFile)
     {
-        fileWrite(pFile, &pMaze->_width, 1);
-        fileWrite(pFile, &pMaze->_height, 1);
-        fileWrite(pFile, pMaze->_mazeData, pMaze->_width * pMaze->_height);
-        fileWrite(pFile, pMaze->_mazeCol, pMaze->_width * pMaze->_height);
-        fileWrite(pFile, pMaze->_mazeFloor, pMaze->_width * pMaze->_height);
-        mazeWriteU16Be(pFile, pMaze->_eventCount);
+        fileWriteBytes(pFile, &pMaze->_width, 1);
+        fileWriteBytes(pFile, &pMaze->_height, 1);
+        fileWriteBytes(pFile, pMaze->_mazeData, pMaze->_width * pMaze->_height);
+        fileWriteBytes(pFile, pMaze->_mazeCol, pMaze->_width * pMaze->_height);
+        fileWriteBytes(pFile, pMaze->_mazeFloor, pMaze->_width * pMaze->_height);
+        fileWriteWords(pFile, &pMaze->_eventCount, 1);
            tMazeEvent* event = pMaze->_events;
      
         while (event != NULL) {
-            fileWrite(pFile, &event->_x, 1);
-            fileWrite(pFile, &event->_y, 1);
-            fileWrite(pFile, &event->_eventType, 1);
-            fileWrite(pFile, &event->_eventDataSize, 1);
-            fileWrite(pFile, event->_eventData, event->_eventDataSize);
+            fileWriteBytes(pFile, &event->_x, 1);
+            fileWriteBytes(pFile, &event->_y, 1);
+            fileWriteBytes(pFile, &event->_eventType, 1);
+            fileWriteBytes(pFile, &event->_eventDataSize, 1);
+            fileWriteBytes(pFile, event->_eventData, event->_eventDataSize);
             event = event->_next;   
         }
-        mazeWriteU16Be(pFile, pMaze->_stringCount);
+        fileWriteWords(pFile, &pMaze->_stringCount, 1);
         tMazeString* mazeString = pMaze->_strings;
         while (mazeString != NULL) {
-            mazeWriteU16Be(pFile, mazeString->_length);
-            fileWrite(pFile, mazeString->_string, mazeString->_length);
+            fileWriteWords(pFile, &mazeString->_length, 1);
+            fileWriteBytes(pFile, mazeString->_string, mazeString->_length);
             mazeString = mazeString->_next;
         }
         fileClose(pFile);

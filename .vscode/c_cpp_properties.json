@@ -17,6 +17,29 @@
             "configurationProvider": "BartmanAbyss.amiga-debug"
         },
         {
+            "name": "Native",
+            "includePath": [
+                "${workspaceFolder}/src",
+                "${workspaceFolder}/include",
+                "${workspaceFolder}/deps/ACE/include",
+                "${workspaceFolder}/deps/ACE/host/include"
+            ],
+            "defines": [
+                "_DEBUG",
+                "AMIGA",
+                "ACE_HOST",
+                "ACE_DEBUG",
+                "ACE_HOST_DEBUG",
+                "ACE_USE_AGA_FEATURES",
+                "ACE_USE_ECS_FEATURES"
+            ],
+            "compilerPath": "C:/msys64/ucrt64/bin/gcc.exe",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "gcc-x64",
+            "configurationProvider": "ms-vscode.cmake-tools"
+        },
+        {
             "name": "Win32",
             "includePath": [
                 "${workspaceFolder}/src",

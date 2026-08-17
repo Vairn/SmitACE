@@ -46,14 +46,14 @@ UBYTE levelEntitiesLoad(tGameState *pState, const char *szPath)
 		return 1;
 	}
 	char magic[4];
-	fileRead(f, magic, 4);
+	fileReadBytes(f, (UBYTE*)magic, 4);
 	if (magic[0] != 'L' || magic[1] != 'V' || magic[2] != 'L' || magic[3] != 'E') {
 		fileClose(f);
 		logWrite("levelEntities: bad magic in %s\n", szPath);
 		return 0;
 	}
 	UBYTE ver = 0;
-	fileRead(f, &ver, 1);
+	fileReadBytes(f, &ver, 1);
 	if (ver != LEVEL_ENTITIES_VERSION) {
 		fileClose(f);
 		logWrite("levelEntities: bad version %u\n", (unsigned)ver);
@@ -61,25 +61,25 @@ UBYTE levelEntitiesLoad(tGameState *pState, const char *szPath)
 	}
 
 	UBYTE nWall = 0;
-	fileRead(f, &nWall, 1);
+	fileReadBytes(f, &nWall, 1);
 	for (UBYTE i = 0; i < nWall; i++) {
 		UBYTE x, y, wallSide, type, gfxIndex, eventType, esz;
-		fileRead(f, &x, 1);
-		fileRead(f, &y, 1);
-		fileRead(f, &wallSide, 1);
-		fileRead(f, &type, 1);
-		fileRead(f, &gfxIndex, 1);
-		fileRead(f, &eventType, 1);
-		fileRead(f, &esz, 1);
+		fileReadBytes(f, &x, 1);
+		fileReadBytes(f, &y, 1);
+		fileReadBytes(f, &wallSide, 1);
+		fileReadBytes(f, &type, 1);
+		fileReadBytes(f, &gfxIndex, 1);
+		fileReadBytes(f, &eventType, 1);
+		fileReadBytes(f, &esz, 1);
 		UBYTE buf[WALL_BTN_EVENT_MAX];
 		if (esz > WALL_BTN_EVENT_MAX) {
 			for (UBYTE k = 0; k < esz; k++) {
 				UBYTE b;
-				fileRead(f, &b, 1);
+				fileReadBytes(f, &b, 1);
 			}
 			esz = 0;
 		} else 		if (esz > 0) {
-			fileRead(f, buf, esz);
+			fileReadBytes(f, buf, esz);
 		}
 		gfxIndex = levelEntResolveWallGfx(pState->m_pCurrentWallset, gfxIndex);
 		tWallButton *wb = wallButtonCreateWithPayload(x, y, wallSide, type, gfxIndex, eventType, esz, esz ? buf : NULL);
@@ -88,16 +88,16 @@ UBYTE levelEntitiesLoad(tGameState *pState, const char *szPath)
 	}
 
 	UBYTE nDoor = 0;
-	fileRead(f, &nDoor, 1);
+	fileReadBytes(f, &nDoor, 1);
 	for (UBYTE i = 0; i < nDoor; i++) {
 		UBYTE x, y, wallSide, type, gfxIndex, tx, ty;
-		fileRead(f, &x, 1);
-		fileRead(f, &y, 1);
-		fileRead(f, &wallSide, 1);
-		fileRead(f, &type, 1);
-		fileRead(f, &gfxIndex, 1);
-		fileRead(f, &tx, 1);
-		fileRead(f, &ty, 1);
+		fileReadBytes(f, &x, 1);
+		fileReadBytes(f, &y, 1);
+		fileReadBytes(f, &wallSide, 1);
+		fileReadBytes(f, &type, 1);
+		fileReadBytes(f, &gfxIndex, 1);
+		fileReadBytes(f, &tx, 1);
+		fileReadBytes(f, &ty, 1);
 		gfxIndex = levelEntResolveDoorGfx(pState->m_pCurrentWallset, gfxIndex);
 		tDoorButton *db = doorButtonCreate(x, y, wallSide, type, gfxIndex, tx, ty);
 		if (db)
@@ -105,14 +105,14 @@ UBYTE levelEntitiesLoad(tGameState *pState, const char *szPath)
 	}
 
 	UBYTE nLock = 0;
-	fileRead(f, &nLock, 1);
+	fileReadBytes(f, &nLock, 1);
 	for (UBYTE i = 0; i < nLock; i++) {
 		UBYTE doorX, doorY, type, keyId, code;
-		fileRead(f, &doorX, 1);
-		fileRead(f, &doorY, 1);
-		fileRead(f, &type, 1);
-		fileRead(f, &keyId, 1);
-		fileRead(f, &code, 1);
+		fileReadBytes(f, &doorX, 1);
+		fileReadBytes(f, &doorY, 1);
+		fileReadBytes(f, &type, 1);
+		fileReadBytes(f, &keyId, 1);
+		fileReadBytes(f, &code, 1);
 		tDoorLock *lk = doorLockCreate(doorX, doorY, type, keyId);
 		if (lk) {
 			lk->_code = code;
@@ -121,45 +121,45 @@ UBYTE levelEntitiesLoad(tGameState *pState, const char *szPath)
 	}
 
 	UBYTE nPlate = 0;
-	fileRead(f, &nPlate, 1);
+	fileReadBytes(f, &nPlate, 1);
 	for (UBYTE i = 0; i < nPlate; i++) {
 		UBYTE x, y, eventType, dataSize;
-		fileRead(f, &x, 1);
-		fileRead(f, &y, 1);
-		fileRead(f, &eventType, 1);
-		fileRead(f, &dataSize, 1);
+		fileReadBytes(f, &x, 1);
+		fileReadBytes(f, &y, 1);
+		fileReadBytes(f, &eventType, 1);
+		fileReadBytes(f, &dataSize, 1);
 		UBYTE pdata[PRESSURE_PLATE_DATA_MAX];
 		if (dataSize > PRESSURE_PLATE_DATA_MAX) {
 			for (UBYTE k = 0; k < dataSize; k++) {
 				UBYTE b;
-				fileRead(f, &b, 1);
+				fileReadBytes(f, &b, 1);
 			}
 			continue;
 		}
 		if (dataSize > 0)
-			fileRead(f, pdata, dataSize);
+			fileReadBytes(f, pdata, dataSize);
 		pressurePlateAdd(&pState->m_pressurePlates, x, y, eventType, dataSize, pdata);
 	}
 
 	UBYTE nGround = 0;
-	fileRead(f, &nGround, 1);
+	fileReadBytes(f, &nGround, 1);
 	for (UBYTE i = 0; i < nGround; i++) {
 		UBYTE x, y, itemIdx, qty;
-		fileRead(f, &x, 1);
-		fileRead(f, &y, 1);
-		fileRead(f, &itemIdx, 1);
-		fileRead(f, &qty, 1);
+		fileReadBytes(f, &x, 1);
+		fileReadBytes(f, &y, 1);
+		fileReadBytes(f, &itemIdx, 1);
+		fileReadBytes(f, &qty, 1);
 		groundItemAdd(&pState->m_groundItems, x, y, itemIdx, qty);
 	}
 
 	UBYTE nMon = 0;
-	fileRead(f, &nMon, 1);
+	fileReadBytes(f, &nMon, 1);
 	logWrite("levelEntities: spawning %u monster(s)\n", (unsigned)nMon);
 	for (UBYTE i = 0; i < nMon; i++) {
 		UBYTE typeId, mx, my;
-		fileRead(f, &typeId, 1);
-		fileRead(f, &mx, 1);
-		fileRead(f, &my, 1);
+		fileReadBytes(f, &typeId, 1);
+		fileReadBytes(f, &mx, 1);
+		fileReadBytes(f, &my, 1);
 		if (pState->m_pMonsterList && pState->m_pMonsterList->_numMonsters < MAX_MONSTERS) {
 			tMonster *m = monsterCreate(typeId);
 			if (m) {

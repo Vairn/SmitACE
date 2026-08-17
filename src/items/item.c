@@ -71,7 +71,7 @@ void loadItems(const char* filename)
         return;
     }
     UBYTE count = 0;
-    fileRead(pFile, &count, 1);
+    fileReadBytes(pFile, &count, 1);
     if (count == 0 || count > 128) {
         fileClose(pFile);
         createFallbackItems();
@@ -86,30 +86,30 @@ void loadItems(const char* filename)
     s_ubItemCount = count;
     for (UBYTE i = 0; i < count; i++) {
         tItem* p = &s_vecItems[i];
-        fileRead(pFile, &p->ubType, 1);
-        fileRead(pFile, &p->ubSubType, 1);
-        fileRead(pFile, &p->ubFlags, 1);
-        fileRead(pFile, &p->ubModifierType, 1);
-        fileRead(pFile, &p->ubModifier, 1);
-        fileRead(pFile, &p->ubValue, 1);
-        fileRead(pFile, &p->ubWeight, 1);
-        fileRead(pFile, &p->ubIcon, 1);
-        fileRead(pFile, &p->ubUsageType, 1);
-        fileRead(pFile, &p->ubKeyId, 1);
-        fileRead(pFile, &p->ubEquipSlot, 1);
+        fileReadBytes(pFile, &p->ubType, 1);
+        fileReadBytes(pFile, &p->ubSubType, 1);
+        fileReadBytes(pFile, &p->ubFlags, 1);
+        fileReadBytes(pFile, &p->ubModifierType, 1);
+        fileReadBytes(pFile, &p->ubModifier, 1);
+        fileReadBytes(pFile, &p->ubValue, 1);
+        fileReadBytes(pFile, &p->ubWeight, 1);
+        fileReadBytes(pFile, &p->ubIcon, 1);
+        fileReadBytes(pFile, &p->ubUsageType, 1);
+        fileReadBytes(pFile, &p->ubKeyId, 1);
+        fileReadBytes(pFile, &p->ubEquipSlot, 1);
         UBYTE nameLen = 0;
-        fileRead(pFile, &nameLen, 1);
+        fileReadBytes(pFile, &nameLen, 1);
         p->pszName = NULL;
         if (nameLen > 0 && nameLen < 64) {
             p->pszName = (char*)memAllocFastClear(nameLen + 1);
             if (p->pszName) {
-                fileRead(pFile, p->pszName, nameLen);
+                fileReadBytes(pFile, (UBYTE*)p->pszName, nameLen);
                 p->pszName[nameLen] = '\0';
             } else {
-                for (UBYTE k = 0; k < nameLen; k++) { UBYTE b; fileRead(pFile, &b, 1); }
+                for (UBYTE k = 0; k < nameLen; k++) { UBYTE b; fileReadBytes(pFile, &b, 1); }
             }
         } else if (nameLen > 0) {
-            for (UBYTE k = 0; k < nameLen; k++) { UBYTE b; fileRead(pFile, &b, 1); }
+            for (UBYTE k = 0; k < nameLen; k++) { UBYTE b; fileReadBytes(pFile, &b, 1); }
         }
     }
     fileClose(pFile);
@@ -125,28 +125,28 @@ void saveItems(const char* filename)
         logWrite("Items: could not write %s\n", filename);
         return;
     }
-    fileWrite(pFile, &s_ubItemCount, 1);
+    fileWriteBytes(pFile, &s_ubItemCount, 1);
     for (UBYTE i = 0; i < s_ubItemCount; i++) {
         tItem* p = &s_vecItems[i];
-        fileWrite(pFile, &p->ubType, 1);
-        fileWrite(pFile, &p->ubSubType, 1);
-        fileWrite(pFile, &p->ubFlags, 1);
-        fileWrite(pFile, &p->ubModifierType, 1);
-        fileWrite(pFile, &p->ubModifier, 1);
-        fileWrite(pFile, &p->ubValue, 1);
-        fileWrite(pFile, &p->ubWeight, 1);
-        fileWrite(pFile, &p->ubIcon, 1);
-        fileWrite(pFile, &p->ubUsageType, 1);
-        fileWrite(pFile, &p->ubKeyId, 1);
-        fileWrite(pFile, &p->ubEquipSlot, 1);
+        fileWriteBytes(pFile, &p->ubType, 1);
+        fileWriteBytes(pFile, &p->ubSubType, 1);
+        fileWriteBytes(pFile, &p->ubFlags, 1);
+        fileWriteBytes(pFile, &p->ubModifierType, 1);
+        fileWriteBytes(pFile, &p->ubModifier, 1);
+        fileWriteBytes(pFile, &p->ubValue, 1);
+        fileWriteBytes(pFile, &p->ubWeight, 1);
+        fileWriteBytes(pFile, &p->ubIcon, 1);
+        fileWriteBytes(pFile, &p->ubUsageType, 1);
+        fileWriteBytes(pFile, &p->ubKeyId, 1);
+        fileWriteBytes(pFile, &p->ubEquipSlot, 1);
         UBYTE nameLen = 0;
         if (p->pszName)
             nameLen = (UBYTE)strlen(p->pszName);
         if (nameLen > 63)
             nameLen = 63;
-        fileWrite(pFile, &nameLen, 1);
+        fileWriteBytes(pFile, &nameLen, 1);
         if (nameLen > 0)
-            fileWrite(pFile, p->pszName, nameLen);
+            fileWriteBytes(pFile, (const UBYTE*)p->pszName, nameLen);
     }
     fileClose(pFile);
     logWrite("Items: saved %d items to %s\n", (int)s_ubItemCount, filename);

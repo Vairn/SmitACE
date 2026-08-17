@@ -7,26 +7,6 @@
 #include <ace/utils/disk_file.h>
 #include <string.h>
 
-static UWORD readU16Be(tFile *pFile)
-{
-	UBYTE b[2];
-	fileRead(pFile, b, 2);
-	return ((UWORD)b[0] << 8) | (UWORD)b[1];
-}
-
-static WORD readI16Be(tFile *pFile)
-{
-	return (WORD)readU16Be(pFile);
-}
-
-static void writeU16Be(tFile *pFile, UWORD v)
-{
-	UBYTE b[2];
-	b[0] = (UBYTE)(v >> 8);
-	b[1] = (UBYTE)v;
-	fileWrite(pFile, b, 2);
-}
-
 tWallset *wallsetLoad(const char *fileName)
 {
 	tFile *pFile = diskFileOpen(fileName, DISK_FILE_MODE_READ, 1);
@@ -38,15 +18,15 @@ tWallset *wallsetLoad(const char *fileName)
 		UBYTE *palette = 0;
 		tWallGfx **tileset = 0;
 		UBYTE header[3];
-		fileRead(pFile, header, 3);
+		fileReadBytes(pFile, header, 3);
 
-		fileRead(pFile, &paletteSize, 1);
+		fileReadBytes(pFile, &paletteSize, 1);
 		palette = (UBYTE *)memAllocFastClear(paletteSize * 3);
-		fileRead(pFile, palette, paletteSize * 3);
+		fileReadBytes(pFile, palette, paletteSize * 3);
 
-		totalTilesetCount = readU16Be(pFile);
+		fileReadWords(pFile, &totalTilesetCount, 1);
 		UBYTE tilesetCount = 0;
-		fileRead(pFile, &tilesetCount, 1);
+		fileReadBytes(pFile, &tilesetCount, 1);
 
 		tWallGfx *tilesetData = (tWallGfx *)memAllocFastClear(sizeof(tWallGfx) * totalTilesetCount);
 		tileset = (tWallGfx **)memAllocFastClear(sizeof(tWallGfx *) * totalTilesetCount);
@@ -62,7 +42,7 @@ tWallset *wallsetLoad(const char *fileName)
 		for (int ts = 0; ts < tilesetCount; ts++)
 		{
 			UBYTE wallsetCount = 0;
-			fileRead(pFile, &wallsetCount, 1);
+			fileReadBytes(pFile, &wallsetCount, 1);
 			if (tilesPerGroup)
 				tilesPerGroup[ts] = wallsetCount;
 			for (int ws = 0; ws < wallsetCount; ws++)
@@ -76,15 +56,15 @@ tWallset *wallsetLoad(const char *fileName)
 				UBYTE type = 0;
 				UBYTE setIndex = 0;
 
-				fileRead(pFile, &type, 1);
-				fileRead(pFile, &setIndex, 1);
-				fileRead(pFile, location, 2);
-				screen[0] = readI16Be(pFile);
-				screen[1] = readI16Be(pFile);
-				x = readU16Be(pFile);
-				y = readU16Be(pFile);
-				width = readU16Be(pFile);
-				height = readU16Be(pFile);
+				fileReadBytes(pFile, &type, 1);
+				fileReadBytes(pFile, &setIndex, 1);
+				fileReadBytes(pFile, (UBYTE*)location, 2);
+				fileReadWords(pFile, (UWORD*)&screen[0], 1);
+				fileReadWords(pFile, (UWORD*)&screen[1], 1);
+				fileReadWords(pFile, &x, 1);
+				fileReadWords(pFile, &y, 1);
+				fileReadWords(pFile, &width, 1);
+				fileReadWords(pFile, &height, 1);
 
 				tileset[i]->_location[0] = location[0];
 				tileset[i]->_location[1] = location[1];
@@ -192,34 +172,36 @@ void wallsetSave(tWallset *pWallset, const char *fileName)
 		return;
 	}
 
-	fileWrite(pFile, pWallset->_header, 3);
-	fileWrite(pFile, &pWallset->_paletteSize, 1);
-	fileWrite(pFile, pWallset->_palette, pWallset->_paletteSize * 3);
+	fileWriteBytes(pFile, pWallset->_header, 3);
+	fileWriteBytes(pFile, &pWallset->_paletteSize, 1);
+	fileWriteBytes(pFile, pWallset->_palette, pWallset->_paletteSize * 3);
 
-	writeU16Be(pFile, pWallset->_tilesetCount);
+	fileWriteWords(pFile, &pWallset->_tilesetCount, 1);
 	{
 		UBYTE tcount = (UBYTE)pWallset->_gfxCount;
-		fileWrite(pFile, &tcount, 1);
+		fileWriteBytes(pFile, &tcount, 1);
 	}
 
 	int i = 0;
 	for (UWORD ts = 0; ts < pWallset->_gfxCount; ts++) {
 		UBYTE wcount = pWallset->_tilesPerGroup[ts];
-		fileWrite(pFile, &wcount, 1);
+		fileWriteBytes(pFile, &wcount, 1);
 		for (UBYTE ws = 0; ws < wcount; ws++, i++) {
 			tWallGfx *g = pWallset->_tileset[i];
 			BYTE loc[2];
-			fileWrite(pFile, &g->_type, 1);
-			fileWrite(pFile, &g->_setIndex, 1);
+			fileWriteBytes(pFile, &g->_type, 1);
+			fileWriteBytes(pFile, &g->_setIndex, 1);
 			loc[0] = (BYTE)g->_location[0];
 			loc[1] = (BYTE)g->_location[1];
-			fileWrite(pFile, loc, 2);
-			writeU16Be(pFile, (UWORD)(WORD)g->_screen[0]);
-			writeU16Be(pFile, (UWORD)(WORD)g->_screen[1]);
-			writeU16Be(pFile, g->_x);
-			writeU16Be(pFile, g->_y);
-			writeU16Be(pFile, g->_width);
-			writeU16Be(pFile, g->_height);
+			fileWriteBytes(pFile, (const UBYTE*)loc, 2);
+			UWORD uwScreen0 = (UWORD)(WORD)g->_screen[0];
+			UWORD uwScreen1 = (UWORD)(WORD)g->_screen[1];
+			fileWriteWords(pFile, &uwScreen0, 1);
+			fileWriteWords(pFile, &uwScreen1, 1);
+			fileWriteWords(pFile, &g->_x, 1);
+			fileWriteWords(pFile, &g->_y, 1);
+			fileWriteWords(pFile, &g->_width, 1);
+			fileWriteWords(pFile, &g->_height, 1);
 		}
 	}
 

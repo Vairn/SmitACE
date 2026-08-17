@@ -192,13 +192,6 @@ static void monsterMoveFlee(tMaze *maze, tMonster *self, const tMonsterList *lis
 	monsterWander(maze, self, list);
 }
 
-static UWORD readU16Be(tFile *f)
-{
-	UBYTE b[2];
-	fileRead(f, b, 2);
-	return ((UWORD)b[0] << 8) | (UWORD)b[1];
-}
-
 static void monsterApplyDef(tMonster *m, UBYTE typeId, const tMonsterDef *d)
 {
 	m->_monsterType = typeId;
@@ -266,21 +259,21 @@ void monsterTableLoad(const char *szPath)
 		return;
 	}
 	char magic[4];
-	fileRead(f, magic, 4);
+	fileReadBytes(f, (UBYTE*)magic, 4);
 	if (magic[0] != 'M' || magic[1] != 'O' || magic[2] != 'N' || magic[3] != 'S') {
 		fileClose(f);
 		monsterTableSetBuiltins();
 		return;
 	}
 	UBYTE ver = 0;
-	fileRead(f, &ver, 1);
+	fileReadBytes(f, &ver, 1);
 	if (ver != 1) {
 		fileClose(f);
 		monsterTableSetBuiltins();
 		return;
 	}
 	UBYTE count = 0;
-	fileRead(f, &count, 1);
+	fileReadBytes(f, &count, 1);
 	if (count == 0 || count > MONSTER_DEF_MAX) {
 		fileClose(f);
 		monsterTableSetBuiltins();
@@ -288,22 +281,22 @@ void monsterTableLoad(const char *szPath)
 	}
 	for (UBYTE i = 0; i < count; i++) {
 		tMonsterDef *d = &s_defs[i];
-		fileRead(f, &d->ubLevel, 1);
-		d->uwMaxHP = readU16Be(f);
+		fileReadBytes(f, &d->ubLevel, 1);
+		fileReadWords(f, &d->uwMaxHP, 1);
 		d->ubAttack = 0;
 		d->ubDefense = 0;
-		fileRead(f, &d->ubAttack, 1);
-		fileRead(f, &d->ubDefense, 1);
-		d->uwExperience = readU16Be(f);
-		fileRead(f, &d->ubAggroRange, 1);
-		fileRead(f, &d->ubFleeThreshold, 1);
-		fileRead(f, d->dropTable, 8);
-		fileRead(f, d->dropChance, 8);
+		fileReadBytes(f, &d->ubAttack, 1);
+		fileReadBytes(f, &d->ubDefense, 1);
+		fileReadWords(f, &d->uwExperience, 1);
+		fileReadBytes(f, &d->ubAggroRange, 1);
+		fileReadBytes(f, &d->ubFleeThreshold, 1);
+		fileReadBytes(f, d->dropTable, 8);
+		fileReadBytes(f, d->dropChance, 8);
 		UBYTE nlen = 0;
-		fileRead(f, &nlen, 1);
+		fileReadBytes(f, &nlen, 1);
 		for (UBYTE k = 0; k < nlen; k++) {
 			UBYTE b;
-			fileRead(f, &b, 1);
+			fileReadBytes(f, &b, 1);
 		}
 	}
 	s_defCount = count;
@@ -459,12 +452,12 @@ UBYTE monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMon
 			moved = 1;
 	}
 
-	logWrite(
-		"monster tick: type=%u pos=(%u,%u) party=(%u,%u) dist=%u state=%u hp=%u/%u aggro=%u\n",
-		(unsigned)monster->_monsterType, (unsigned)monster->_partyPosX,
-		(unsigned)monster->_partyPosY, (unsigned)party->_PartyX, (unsigned)party->_PartyY,
-		(unsigned)distance, (unsigned)monster->_state, (unsigned)monster->_base._HP,
-		(unsigned)monster->_base._MaxHP, (unsigned)monster->_aggroRange);
+	// logWrite(
+	// 	"monster tick: type=%u pos=(%u,%u) party=(%u,%u) dist=%u state=%u hp=%u/%u aggro=%u\n",
+	// 	(unsigned)monster->_monsterType, (unsigned)monster->_partyPosX,
+	// 	(unsigned)monster->_partyPosY, (unsigned)party->_PartyX, (unsigned)party->_PartyY,
+	// 	(unsigned)distance, (unsigned)monster->_state, (unsigned)monster->_base._HP,
+	// 	(unsigned)monster->_base._MaxHP, (unsigned)monster->_aggroRange);
 
 	return moved;
 }

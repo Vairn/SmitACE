@@ -5,6 +5,7 @@
 #include <ace/managers/viewport/simplebuffer.h> 
 #include <ace/managers/system.h>
 #include <ace/managers/mouse.h>
+#include <ace/managers/log.h>
 
 #include "screen.h"
 
@@ -23,6 +24,9 @@ void mouse_pointer_create(char const *filepath)
 {
     systemUse();
     tBitMap *atlas = bitmapCreateFromPath(filepath, 0);
+    if (!atlas) {
+        logWrite("ERR: mouse_pointer_create: failed to load '%s'\n", filepath);
+    }
 
     for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
     {
@@ -39,11 +43,19 @@ void mouse_pointer_create(char const *filepath)
             POINTER_WIDTH, POINTER_HEIGHT + 2,
             SPRITE_BPP, BMF_CLEAR | BMF_INTERLEAVED);
 
+        if (!atlas) {
+            bitmapDestroy(temp);
+            continue;
+        }
+
         blitCopyAligned(
             atlas, idx * POINTER_WIDTH, 0,
             temp, 0, 1,
             POINTER_WIDTH, POINTER_HEIGHT);
-        
+        /* Host blits stay in the custom-register shadow until blitWait().
+         * The CPU split below reads `temp`, so the blit must be finished. */
+        blitWait();
+
         // Convert the 4bpp bitmap to 2bpp.
         for (UWORD r = 0; r < temp->Rows; r++)
         {
@@ -58,7 +70,9 @@ void mouse_pointer_create(char const *filepath)
         bitmapDestroy(temp);
     }
 
-    bitmapDestroy(atlas);
+    if (atlas) {
+        bitmapDestroy(atlas);
+    }
 
    
     current_pointer0_ = spriteAdd(0, pointers_low_[MOUSE_POINTER]);
@@ -72,12 +86,18 @@ void mouse_pointer_create(char const *filepath)
 
 void mouse_pointer_switch(mouse_pointer_t new_pointer)
 {
+    if (!current_pointer0_ || !current_pointer1_) {
+        return;
+    }
     spriteSetBitmap(current_pointer0_, pointers_low_[new_pointer]);
     spriteSetBitmap(current_pointer1_, pointers_high_[new_pointer]);
 }
 
 void mouse_pointer_update(void)
 {
+    if (!current_pointer0_ || !current_pointer1_) {
+        return;
+    }
     current_pointer0_->wX = mouseGetX(MOUSE_PORT_1);
     current_pointer0_->wY = mouseGetY(MOUSE_PORT_1);
     current_pointer1_->wX = mouseGetX(MOUSE_PORT_1);
@@ -93,13 +113,19 @@ void mouse_pointer_update(void)
 
 void mouse_pointer_destroy(void)
 {
+    if (current_pointer0_) {
+        spriteRemove(current_pointer0_);
+        current_pointer0_ = 0;
+    }
+    if (current_pointer1_) {
+        spriteRemove(current_pointer1_);
+        current_pointer1_ = 0;
+    }
     for (BYTE idx = 0; idx < MOUSE_MAX_COUNT; idx++)
     {
         bitmapDestroy(pointers_low_[idx]);
         bitmapDestroy(pointers_high_[idx]);
+        pointers_low_[idx] = 0;
+        pointers_high_[idx] = 0;
     }
-
-    spriteRemove(current_pointer0_);
-    spriteRemove(current_pointer1_);
-
 }

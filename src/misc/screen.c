@@ -1,6 +1,6 @@
 #include "screen.h"
 
-#include <mini_std/stdlib.h>
+#include <stdlib.h>
 #include <ace/managers/viewport/simplebuffer.h>
 #include <ace/managers/system.h>
 #include <ace/managers/memory.h>
@@ -15,7 +15,7 @@ tScreen *g_pCurrentScreen = NULL;
 tScreen *CreateNewScreen(BYTE palCount)
 {
 
-    tScreen *pNewScreen = memAllocFastClear(sizeof(tScreen));
+    tScreen  *pNewScreen = memAllocFastClear(sizeof(tScreen));
     if (pNewScreen)
     {
 
@@ -27,12 +27,23 @@ tScreen *CreateNewScreen(BYTE palCount)
         pNewScreen->_pVp = vPortCreate(0,
                                        TAG_VPORT_BPP, 8,
                                        TAG_VPORT_USES_AGA, 1,
-                                       TAG_VPORT_FMODE,3,
+#ifdef ACE_HOST
+                                       /* Host Denise FMODE 3 + interleaved fetch still shreds
+                                        * 64px columns. OCS-width fetch and planar (non-IL)
+                                        * buffers match the .bm assets and the host rasterizer. */
+                                       TAG_VPORT_FMODE, 0,
+#else
+                                       TAG_VPORT_FMODE, 3,
+#endif
                                        TAG_VPORT_VIEW, pNewScreen->_pView,
                                        TAG_END);
 
         pNewScreen->_pBfr = simpleBufferCreate(0,
-                                               TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR |BMF_INTERLEAVED,
+#ifdef ACE_HOST
+                                               TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR,
+#else
+                                               TAG_SIMPLEBUFFER_BITMAP_FLAGS, BMF_CLEAR | BMF_INTERLEAVED,
+#endif
                                                TAG_SIMPLEBUFFER_VPORT, pNewScreen->_pVp,
                                                TAG_SIMPLEBUFFER_IS_DBLBUF, 1,
                                                TAG_SIMPLEBUFFER_USE_X_SCROLLING, 0,
@@ -89,7 +100,7 @@ void ScreenSyncFadePaletteToViewport(tScreen *pScreen)
         return;
 #ifdef ACE_USE_AGA_FEATURES
     if (pScreen->_pView->pFirstVPort->eFlags & VP_FLAG_AGA) {
-        paletteDimAGA(
+        paletteDimAga(
             (ULONG *)pScreen->_pFade->pPaletteRef,
             (ULONG *)pScreen->_pView->pFirstVPort->pPalette,
             pScreen->_pFade->uwColorCount, 255);
@@ -99,7 +110,7 @@ void ScreenSyncFadePaletteToViewport(tScreen *pScreen)
         UWORD cnt = pScreen->_pFade->uwColorCount;
         if (cnt > 32)
             cnt = 32;
-        paletteDim(
+        paletteDimOcs(
             (UWORD *)pScreen->_pFade->pPaletteRef,
             (volatile UWORD *)pScreen->_pView->pFirstVPort->pPalette,
             cnt, 15);
@@ -108,7 +119,7 @@ void ScreenSyncFadePaletteToViewport(tScreen *pScreen)
 
 void ScreenUpdate(void)
 {
-    logWrite("ScreenUpdate");
+    //logWrite("ScreenUpdate");
     systemSetDmaBit(DMAB_SPRITE, 1);
 
     mouse_pointer_update();
@@ -125,7 +136,10 @@ void ScreenUpdate(void)
     viewProcessManagers(g_pCurrentScreen->_pView);
     copProcessBlocks();
     // systemIdleBegin();
-    vPortWaitUntilEnd(g_pCurrentScreen->_pVp);
+    /* Wait for the next occurrence of the viewport end line (not "already
+     * past it"). On the host blit is instant, so isExact=0 returned immediately
+     * for most of the frame and the game loop spun unbound. */
+    vPortWaitForEnd(g_pCurrentScreen->_pVp);
     timerProcess();
     //	systemIdleEnd();
 }
@@ -157,9 +171,13 @@ void ScreenClose()
         systemSetDmaBit(DMAB_SPRITE, 0);
 
         mouse_pointer_destroy();
-        simpleBufferDestroy(pScreen->_pBfr);
-        viewDestroy(pScreen->_pView);
         fadeDestroy(pScreen->_pFade);
+        /*
+         * VPort managers (including simpleBuffer) are destroyed by viewDestroy()
+         * via vPortDestroy()->vPortRmManager(). Destroying them here causes
+         * double-free and corrupts the viewport manager list.
+         */
+        viewDestroy(pScreen->_pView);
 
         memFree(pScreen, sizeof(tScreen));
     }

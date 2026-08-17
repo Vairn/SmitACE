@@ -41,7 +41,14 @@ res/
 /_deps/
 
 .vscode/
+!.vscode/cmake-kits.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+!.vscode/c_cpp_properties.json
+!.vscode/amiga.json
 test/
 .vscode/SYMBOLS.DB
 .vscode/SYMBOLS.DB-shm
 .vscode/SYMBOLS.DB-wal
+data/

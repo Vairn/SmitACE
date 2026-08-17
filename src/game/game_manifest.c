@@ -35,38 +35,38 @@ UBYTE gameManifestLoad(tGameManifest *p, const char *szPath)
 		return 0;
 	}
 	char magic[4];
-	fileRead(f, magic, 4);
+	fileReadBytes(f, (UBYTE*)magic, 4);
 	if (magic[0] != 'S' || magic[1] != 'M' || magic[2] != 'T' || magic[3] != 'E') {
 		fileClose(f);
 		logWrite("gameManifest: bad magic\n");
 		return 0;
 	}
 	UBYTE ver = 0;
-	fileRead(f, &ver, 1);
+	fileReadBytes(f, &ver, 1);
 	if (ver != 1) {
 		fileClose(f);
 		logWrite("gameManifest: unsupported version %u\n", (unsigned)ver);
 		return 0;
 	}
-	fileRead(f, &p->startLevel, 1);
-	fileRead(f, &p->levelCount, 1);
+	fileReadBytes(f, &p->startLevel, 1);
+	fileReadBytes(f, &p->levelCount, 1);
 	if (p->levelCount == 0 || p->levelCount > GAME_MANIFEST_MAX_LEVELS) {
 		fileClose(f);
 		gameManifestSetDefaults(p);
 		return 0;
 	}
-	fileRead(f, p->itemsPath, GAME_MANIFEST_PATH_MAX);
+	fileReadBytes(f, (UBYTE*)p->itemsPath, GAME_MANIFEST_PATH_MAX);
 	p->itemsPath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
-	fileRead(f, p->monstersPath, GAME_MANIFEST_PATH_MAX);
+	fileReadBytes(f, (UBYTE*)p->monstersPath, GAME_MANIFEST_PATH_MAX);
 	p->monstersPath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
-	fileRead(f, p->uiPalettePath, GAME_MANIFEST_PATH_MAX);
+	fileReadBytes(f, (UBYTE*)p->uiPalettePath, GAME_MANIFEST_PATH_MAX);
 	p->uiPalettePath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
 	for (UBYTE i = 0; i < p->levelCount; i++) {
-		fileRead(f, p->levels[i].mazePath, GAME_MANIFEST_PATH_MAX);
+		fileReadBytes(f, (UBYTE*)p->levels[i].mazePath, GAME_MANIFEST_PATH_MAX);
 		p->levels[i].mazePath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
-		fileRead(f, p->levels[i].wallsetPath, GAME_MANIFEST_PATH_MAX);
+		fileReadBytes(f, (UBYTE*)p->levels[i].wallsetPath, GAME_MANIFEST_PATH_MAX);
 		p->levels[i].wallsetPath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
-		fileRead(f, p->levels[i].entitiesPath, GAME_MANIFEST_PATH_MAX);
+		fileReadBytes(f, (UBYTE*)p->levels[i].entitiesPath, GAME_MANIFEST_PATH_MAX);
 		p->levels[i].entitiesPath[GAME_MANIFEST_PATH_MAX - 1] = '\0';
 	}
 	fileClose(f);

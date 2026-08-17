@@ -205,32 +205,35 @@ UBYTE renderDoor(tWallset *pWallset, tMaze *pMaze, tBitMap *pCurrentBuffer,
     // Check for active door animation
     tDoorAnim *anim = doorAnimFind(pMaze, px + x, py + y);
     if (anim) {
-        UBYTE doorHeight = pWallset->_tileset[doorW]->_height;
-        UBYTE yOffset = 0;
+        /*
+         * Animate the panel with a real vertical slide (LoL-style feel), rather
+         * than only shrinking in place, which looks like a floating crop.
+         */
+        UWORD fullHeight = pWallset->_tileset[doorW]->_height;
+        UWORD stepDen = (DOOR_ANIM_FRAMES > 1) ? (DOOR_ANIM_FRAMES - 1) : 1;
+        UWORD frame = anim->frame;
+        if (frame > stepDen)
+            frame = stepDen;
 
-        // Get height ratio based on frame number
-        UBYTE heightRatio;
-        if (anim->state == DOOR_ANIM_OPENING) {
-            // Opening: go from 16 to 0
-            heightRatio = 16 - ((anim->frame * 16) / DOOR_ANIM_FRAMES);
-        } else {
-            // Closing: go from 0 to 16
-            heightRatio = (anim->frame * 16) / DOOR_ANIM_FRAMES;
-        }
-        
-        if (heightRatio > 0) {  // Skip if door is fully open
-            doorHeight = (doorHeight * heightRatio) / 16;
+        /* Amount the door has opened in pixels. */
+        UWORD openPx = (fullHeight * frame) / stepDen;
+        if (anim->state == DOOR_ANIM_CLOSING)
+            openPx = fullHeight - openPx;
+
+        if (openPx < fullHeight) {  // Skip if fully open
+            UWORD visibleHeight = fullHeight - openPx;
+            UWORD srcY = pWallset->_tileset[doorW]->_y;
+            UWORD dstY = pWallset->_tileset[doorW]->_screen[1] + SOFFX + openPx;
             UWORD si = pWallset->_tileset[doorW]->_setIndex;
             tBitMap *g = (si < pWallset->_gfxCount) ? pWallset->_gfx[si] : NULL;
             tBitMap *m = (si < pWallset->_gfxCount) ? pWallset->_mask[si] : NULL;
             if (g && m) {
-            // Draw the door
-            blitUnsafeCopyMask(g,
-                             pWallset->_tileset[doorW]->_x, pWallset->_tileset[doorW]->_y + yOffset,
-                             pCurrentBuffer,
-                             pWallset->_tileset[doorW]->_screen[0] + SOFFX, pWallset->_tileset[doorW]->_screen[1] + SOFFX + yOffset,
-                             pWallset->_tileset[doorW]->_width, doorHeight,
-                             (UBYTE *)m->Planes[0]);
+                blitUnsafeCopyMask(g,
+                    pWallset->_tileset[doorW]->_x, srcY,
+                    pCurrentBuffer,
+                    pWallset->_tileset[doorW]->_screen[0] + SOFFX, dstY,
+                    pWallset->_tileset[doorW]->_width, visibleHeight,
+                    (UBYTE *)m->Planes[0]);
             }
             return 1; // Animation frame was drawn
         }

@@ -29,17 +29,17 @@ UBYTE LoadGameState(const char* fileName)
     tFile* pFile = diskFileOpen(fileName, DISK_FILE_MODE_READ, 1);
     if (!pFile) return 0;
     UBYTE ver = 0;
-    fileRead(pFile, &ver, 1);
+    fileReadBytes(pFile, &ver, 1);
     if (ver != SAVE_VERSION && ver != SAVE_VERSION_LEGACY) { fileClose(pFile); return 0; }
     UBYTE levelId = 0;
     UBYTE partyX = 0, partyY = 0, partyFacing = 0, battery = 0;
-    fileRead(pFile, &levelId, 1);
-    fileRead(pFile, &partyX, 1);
-    fileRead(pFile, &partyY, 1);
-    fileRead(pFile, &partyFacing, 1);
-    fileRead(pFile, &battery, 1);
+    fileReadBytes(pFile, &levelId, 1);
+    fileReadBytes(pFile, &partyX, 1);
+    fileReadBytes(pFile, &partyY, 1);
+    fileReadBytes(pFile, &partyFacing, 1);
+    fileReadBytes(pFile, &battery, 1);
     UBYTE invCount = 0;
-    fileRead(pFile, &invCount, 1);
+    fileReadBytes(pFile, &invCount, 1);
     if (invCount > INVENTORY_MAX_ITEMS) invCount = INVENTORY_MAX_ITEMS;
     g_pGameState = (tGameState*)memAllocFastClear(sizeof(tGameState));
     g_pGameState->m_pCurrentParty = characterPartyCreate();
@@ -63,13 +63,13 @@ UBYTE LoadGameState(const char* fileName)
     monsterTableLoad((char *)gameManifestGet()->monstersPath);
     for (UBYTE i = 0; i < invCount; i++) {
         UBYTE itemIdx = 0, qty = 0;
-        fileRead(pFile, &itemIdx, 1);
-        fileRead(pFile, &qty, 1);
+        fileReadBytes(pFile, &itemIdx, 1);
+        fileReadBytes(pFile, &qty, 1);
         inventoryAddItem(g_pGameState->m_pInventory, itemIdx, qty);
     }
-    fileRead(pFile, g_pGameState->m_bGlobalFlags, 256);
+    fileReadBytes(pFile, g_pGameState->m_bGlobalFlags, 256);
     if (ver >= SAVE_VERSION)
-        fileRead(pFile, g_pGameState->m_bLocalFlags, 256);
+        fileReadBytes(pFile, g_pGameState->m_bLocalFlags, 256);
     fileClose(pFile);
 
     characterPartyEnsureDefaultHero(g_pGameState->m_pCurrentParty);
@@ -90,21 +90,21 @@ UBYTE SaveGameState(const char* fileName)
     if (!pFile) return 0;
     UBYTE ver = SAVE_VERSION;
     UBYTE levelId = g_pGameState->m_ubCurrentLevel;
-    fileWrite(pFile, &ver, 1);
-    fileWrite(pFile, &levelId, 1);
-    fileWrite(pFile, &g_pGameState->m_pCurrentParty->_PartyX, 1);
-    fileWrite(pFile, &g_pGameState->m_pCurrentParty->_PartyY, 1);
-    fileWrite(pFile, &g_pGameState->m_pCurrentParty->_PartyFacing, 1);
-    fileWrite(pFile, &g_pGameState->m_pCurrentParty->_BatteryLevel, 1);
+    fileWriteBytes(pFile, &ver, 1);
+    fileWriteBytes(pFile, &levelId, 1);
+    fileWriteBytes(pFile, &g_pGameState->m_pCurrentParty->_PartyX, 1);
+    fileWriteBytes(pFile, &g_pGameState->m_pCurrentParty->_PartyY, 1);
+    fileWriteBytes(pFile, &g_pGameState->m_pCurrentParty->_PartyFacing, 1);
+    fileWriteBytes(pFile, &g_pGameState->m_pCurrentParty->_BatteryLevel, 1);
     UBYTE invCount = g_pGameState->m_pInventory->ubItemCount;
     if (invCount > INVENTORY_MAX_ITEMS) invCount = INVENTORY_MAX_ITEMS;
-    fileWrite(pFile, &invCount, 1);
+    fileWriteBytes(pFile, &invCount, 1);
     for (UBYTE i = 0; i < invCount; i++) {
-        fileWrite(pFile, &g_pGameState->m_pInventory->pItems[i], 1);
-        fileWrite(pFile, &g_pGameState->m_pInventory->pItemQuantities[i], 1);
+        fileWriteBytes(pFile, &g_pGameState->m_pInventory->pItems[i], 1);
+        fileWriteBytes(pFile, &g_pGameState->m_pInventory->pItemQuantities[i], 1);
     }
-    fileWrite(pFile, g_pGameState->m_bGlobalFlags, 256);
-    fileWrite(pFile, g_pGameState->m_bLocalFlags, 256);
+    fileWriteBytes(pFile, g_pGameState->m_bGlobalFlags, 256);
+    fileWriteBytes(pFile, g_pGameState->m_bLocalFlags, 256);
     fileClose(pFile);
     return 1;
 }

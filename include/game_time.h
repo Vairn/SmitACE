@@ -7,6 +7,12 @@
 #define GAME_TIME_TICKS_PER_SEC 50u
 #endif
 
+/** Min delay between party steps/turns. Host blit is instant so per-frame
+ *  repeat-while-held would otherwise zip through the maze. */
+#ifndef GAME_STEP_TICKS
+#define GAME_STEP_TICKS 12u
+#endif
+
 /** Start or restart the ~1 s period from the current game time (e.g. on level start / fade-in). */
 void gameTimeReset1s(void);
 

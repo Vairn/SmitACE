@@ -15,6 +15,7 @@ SmitACE brings the dungeon-crawler *Smite* to the Amiga platform with full AGA (
 | Platform | Requirements |
 |----------|--------------|
 | **Amiga** | AGA chipset, 68020+ CPU |
+| **Native** | Windows/Linux, CMake, MinGW GCC or MSVC, SDL2 |
 | **Development** | Windows, VS Code, Amiga C Extension, CMake |
 
 ---
@@ -30,6 +31,14 @@ cmake --build .
 ```
 
 Copy the `data` folder to the build output directory before running. See **[Installation Guide](docs/INSTALL.md)** for detailed setup.
+
+Native (host SDL) build:
+
+```bash
+cmake -S . -B build/Native -G Ninja -DACE_HOST=ON -DCMAKE_PREFIX_PATH=C:/msys64/ucrt64
+cmake --build build/Native --parallel
+cd build/Native && ./smite.exe
+```
 
 ---
 

@@ -10,6 +10,7 @@ This guide walks you through setting up the development environment for SmitACE 
 | **Extension** | [Amiga C/C++ Compile, Debug & Profile](https://marketplace.visualstudio.com/items?itemName=BartmanAbyss.amiga-debug) by Bartman |
 | **Build System** | CMake 3.14 or later |
 | **ACE Framework** | Custom AGA branch (included as submodule) |
+| **Native (optional)** | MSYS2 UCRT GCC, SDL2, Ninja (`mingw-w64-ucrt-x86_64-gcc`, `mingw-w64-ucrt-x86_64-SDL2`) |
 
 ## Step-by-Step Installation
 
@@ -103,4 +104,17 @@ The game will fail to start without the `data` folder. Ensure it's copied from t
 
 ### CMake Kit Selection
 
-In VS Code, select the appropriate CMake kit (e.g., "Amiga GCC" or "bartman_gcc_support") from the status bar before configuring.
+In VS Code, select the appropriate CMake kit (e.g. **Native** for the host SDL build, or the Bartman Amiga kit) from the status bar before configuring.
+
+### Native build (ACE host)
+
+Requires MSYS2 UCRT GCC and SDL2. From the repo root:
+
+```bash
+cmake -S . -B build/Native -G Ninja -DACE_HOST=ON -DCMAKE_BUILD_TYPE=Debug -DCMAKE_PREFIX_PATH=C:/msys64/ucrt64
+cmake --build build/Native --parallel
+cd build/Native
+./smite.exe
+```
+
+Or in VS Code: select the **Native** kit, configure, then launch **Native**.

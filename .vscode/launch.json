@@ -29,15 +29,7 @@
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
 			"internalConsoleOptions": "openOnSessionStart"
 		},
-		{
-			"type": "amiga",
-			"request": "launch",
-			"name": "Amiga 1200 FMODE2 Test",
-			"config": "A1200",
-			"program": "${workspaceFolder}/build/unknown/smite",
-			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
-			"internalConsoleOptions": "openOnSessionStart"
-		},
+		
 		{
 			"type": "amiga",
 			"request": "launch",
@@ -46,6 +38,30 @@
 			"program": "${workspaceFolder}/build/unknown/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
 			"internalConsoleOptions": "openOnSessionStart"
+		},
+		{
+			"type": "cppdbg",
+			"request": "launch",
+			"name": "Native",
+			"program": "${workspaceFolder}/build/Native/smite.exe",
+			"args": [],
+			"cwd": "${workspaceFolder}/build/Native",
+			"environment": [
+				{
+					"name": "PATH",
+					"value": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			],
+			"preLaunchTask": "build native",
+			"MIMode": "gdb",
+			"miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
 		}
 	]
 }
