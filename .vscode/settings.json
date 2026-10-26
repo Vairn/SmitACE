@@ -47,7 +47,8 @@
 		"extview.h": "c",
 		"game_ui.h": "c",
 		"layer.h": "c",
-		"disk_file_private.h": "c"
+		"disk_file_private.h": "c",
+		"system_error": "cpp"
 	},
 	"cmake.configureOnOpen": false,
 	"cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}",

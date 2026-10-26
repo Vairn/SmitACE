@@ -5,6 +5,7 @@
 #include "script.h"
 #include "monster.h"
 #include "ground_item.h"
+#include "item.h"
 #include "wallbutton.h"
 #include "doorbutton.h"
 #include "wall_interactable_placeholder.h"
@@ -12,6 +13,8 @@
 #include <ace/managers/blit.h>
 #include <string.h>
 #define SOFFX 5
+#define VIEW_W 240
+#define VIEW_H 180
 
 static tWallGfx *findFloorGfxForSlot(tWallset *pWallset, BYTE tx, BYTE ty)
 {
@@ -23,6 +26,180 @@ static tWallGfx *findFloorGfxForSlot(tWallset *pWallset, BYTE tx, BYTE ty)
             return pWallset->_tileset[w];
     }
     return NULL;
+}
+
+static tWallGfx *findTypedGfxForSlot(tWallset *pWallset, BYTE tx, BYTE ty, UBYTE type)
+{
+    if (!pWallset)
+        return NULL;
+    for (UWORD w = 0; w < pWallset->_tilesetCount; ++w) {
+        if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1]
+            && pWallset->_tileset[w]->_type == type)
+            return pWallset->_tileset[w];
+    }
+    return NULL;
+}
+
+#define PROP_NONE 0
+#define PROP_CHARGER 1
+#define PROP_LIFT 2
+#define PROP_PLATE 3
+#define PROP_EXIT 4
+
+/** Wallset colours live at screen indices 32+. */
+#define PROP_COL_BLACK 32
+#define PROP_COL_CYAN 40
+#define PROP_COL_ORANGE 38
+#define PROP_COL_GOLD 45
+#define PROP_COL_PALE 47
+#define PROP_COL_GRAY 36
+
+static UBYTE floorPropAt(tGameState *pGameState, UBYTE x, UBYTE y)
+{
+    UBYTE kind = PROP_NONE;
+    tMaze *pMaze;
+    UBYTE i;
+    if (!pGameState || !pGameState->m_pCurrentMaze)
+        return PROP_NONE;
+    pMaze = pGameState->m_pCurrentMaze;
+    for (tMazeEvent *e = pMaze->_events; e; e = e->_next) {
+        if (e->_x != x || e->_y != y)
+            continue;
+        if (e->_eventType == EVENT_CHANGELEVEL)
+            return PROP_LIFT;
+        if (e->_eventType == EVENT_WIN)
+            kind = PROP_EXIT;
+        else if (e->_eventType == EVENT_BATTERY_CHARGER && kind == PROP_NONE)
+            kind = PROP_CHARGER;
+    }
+    if (kind != PROP_NONE)
+        return kind;
+    for (i = 0; i < pGameState->m_pressurePlates.count; i++) {
+        if (pGameState->m_pressurePlates.plates[i].x == x
+            && pGameState->m_pressurePlates.plates[i].y == y)
+            return PROP_PLATE;
+    }
+    return PROP_NONE;
+}
+
+static void fillClipped(tBitMap *pBuf, WORD x, WORD y, WORD w, WORD h, UBYTE color)
+{
+    if (w <= 0 || h <= 0)
+        return;
+    if (x < SOFFX) {
+        w = (WORD)(w - (SOFFX - x));
+        x = SOFFX;
+    }
+    if (y < SOFFX) {
+        h = (WORD)(h - (SOFFX - y));
+        y = SOFFX;
+    }
+    if (x + w > SOFFX + VIEW_W)
+        w = (WORD)(SOFFX + VIEW_W - x);
+    if (y + h > SOFFX + VIEW_H)
+        h = (WORD)(SOFFX + VIEW_H - y);
+    if (w <= 0 || h <= 0)
+        return;
+    blitRect(pBuf, (UWORD)x, (UWORD)y, (UWORD)w, (UWORD)h, color);
+}
+
+static void drawShaft(tBitMap *pBuf, WORD x, WORD y, WORD w, WORD h, UBYTE outer, UBYTE inner)
+{
+    WORD m;
+    if (w < 4 || h < 4)
+        return;
+    m = (w < 16 || h < 16) ? 1 : 2;
+    fillClipped(pBuf, x, y, w, h, outer);
+    fillClipped(pBuf, (WORD)(x + m), (WORD)(y + m), (WORD)(w - 2 * m), (WORD)(h - 2 * m), inner);
+}
+
+/** A grate lying in the floor strip, not the tall event-sprite box. */
+static void floorHatchRect(tWallGfx *floor, WORD *x, WORD *y, WORD *w, WORD *h)
+{
+    WORD fw = (WORD)floor->_width;
+    WORD fh = (WORD)floor->_height;
+    WORD hw = fw / 5;
+    WORD hh = fh - 4;
+    if (hw < 12)
+        hw = 12;
+    if (hw > 36)
+        hw = 36;
+    if (hh < 6)
+        hh = 6;
+    if (hh > 14)
+        hh = 14;
+    if (hw > fw)
+        hw = fw;
+    if (hh > fh)
+        hh = fh;
+    *w = hw;
+    *h = hh;
+    *x = floor->_screen[0] + SOFFX + (fw - hw) / 2;
+    *y = floor->_screen[1] + SOFFX + (fh - hh) / 2;
+}
+
+static void drawHatch(tBitMap *pBuf, WORD x, WORD y, WORD w, WORD h, UBYTE outer, UBYTE inner)
+{
+    WORD m, gap, bar, innerW;
+    drawShaft(pBuf, x, y, w, h, outer, inner);
+    m = (w < 16 || h < 10) ? 1 : 2;
+    innerW = (WORD)(w - 2 * m);
+    if (innerW < 6 || h - 2 * m < 3)
+        return;
+    bar = (innerW > 18) ? 2 : 1;
+    gap = innerW / 3;
+    fillClipped(pBuf, (WORD)(x + m + gap), (WORD)(y + m), bar, (WORD)(h - 2 * m), outer);
+    fillClipped(pBuf, (WORD)(x + m + gap * 2), (WORD)(y + m), bar, (WORD)(h - 2 * m), outer);
+}
+
+/**
+ * The wallset ships one event picture, and it reads as the charger.
+ * Lifts, plates and the way out get their own mark. Story tiles stay bare floor.
+ * A charger seen from the side has no event picture, so it gets a small cyan pad.
+ */
+static void drawFloorProp(tBitMap *pBuf, tWallset *pWallset, BYTE tx, BYTE ty, UBYTE kind)
+{
+    tWallGfx *floor = findFloorGfxForSlot(pWallset, tx, ty);
+    tWallGfx *eventGfx = findTypedGfxForSlot(pWallset, tx, ty, MAZE_EVENT_TRIGGER);
+    if (kind == PROP_CHARGER) {
+        WORD s, x, y;
+        if (eventGfx || !floor)
+            return;
+        s = (WORD)floor->_width / 8;
+        if (s < 5)
+            s = 5;
+        if (s > 14)
+            s = 14;
+        x = floor->_screen[0] + SOFFX + (WORD)floor->_width / 2 - s / 2;
+        y = floor->_screen[1] + SOFFX + (WORD)floor->_height - s - 2;
+        drawShaft(pBuf, x, y, s, s, PROP_COL_CYAN, PROP_COL_GOLD);
+        return;
+    }
+    if ((kind == PROP_LIFT || kind == PROP_EXIT) && floor) {
+        WORD x, y, w, h;
+        floorHatchRect(floor, &x, &y, &w, &h);
+        drawHatch(pBuf, x, y, w, h,
+            (kind == PROP_LIFT) ? PROP_COL_GOLD : PROP_COL_ORANGE, PROP_COL_BLACK);
+        return;
+    }
+    if (kind == PROP_PLATE && floor) {
+        WORD bw = (WORD)floor->_width / 2;
+        WORD bh = (WORD)floor->_height / 5;
+        WORD x, y;
+        if (bw < 8)
+            bw = 8;
+        if (bw > 48)
+            bw = 48;
+        if (bh < 3)
+            bh = 3;
+        if (bh > 8)
+            bh = 8;
+        x = floor->_screen[0] + SOFFX + (WORD)floor->_width / 2 - bw / 2;
+        y = floor->_screen[1] + SOFFX + (WORD)floor->_height - bh - 2;
+        fillClipped(pBuf, x, y, bw, bh, PROP_COL_PALE);
+        if (bh > 4)
+            fillClipped(pBuf, (WORD)(x + 2), (WORD)(y + 1), (WORD)(bw - 4), (WORD)(bh - 2), PROP_COL_GRAY);
+    }
 }
 
 static void drawMonsterPlaceholder(tBitMap *pBuf, tWallGfx *floor, tMonster *mon)
@@ -43,6 +220,124 @@ static void drawMonsterPlaceholder(tBitMap *pBuf, tWallGfx *floor, tMonster *mon
     blitRect(pBuf, sx, sy, (UWORD)mw, (UWORD)mh, color);
 }
 
+static UBYTE monsterDepthForSlot(BYTE ty)
+{
+    if (ty == 0)
+        return 0;
+    if (ty == -1)
+        return 1;
+    if (ty == -2)
+        return 2;
+    return 3;
+}
+
+/** Feet on the floor tile. Clip to the viewport; the blitter does not. */
+static void drawMonsterAt(tBitMap *pBuf, tWallGfx *floor, tMonster *mon, BYTE slotTy, tGameState *pGameState)
+{
+    tBitMap *gfx = NULL;
+    tBitMap *msk = NULL;
+    UBYTE attacking = 0;
+    UBYTE partyFacing = 0;
+    UBYTE partyX = 0;
+    UBYTE partyY = 0;
+    if (pGameState && pGameState->m_pCurrentParty) {
+        partyFacing = pGameState->m_pCurrentParty->_PartyFacing;
+        partyX = pGameState->m_pCurrentParty->_PartyX;
+        partyY = pGameState->m_pCurrentParty->_PartyY;
+        if (mon->_state == MONSTER_STATE_AGGRESSIVE
+            && mon->_partyPosX == partyX && mon->_partyPosY == partyY)
+            attacking = 1;
+    }
+    monsterGfxGet(mon->_monsterType,
+        monsterGfxPick(mon->_monsterType, attacking, mon->_facing, partyFacing,
+            mon->_partyPosX, mon->_partyPosY, partyX, partyY),
+        monsterDepthForSlot(slotTy), &gfx, &msk);
+    if (!gfx || !msk || !msk->Planes[0] || gfx->BytesPerRow == 0 || gfx->Rows == 0) {
+        drawMonsterPlaceholder(pBuf, floor, mon);
+        return;
+    }
+
+    WORD fw = (WORD)(gfx->BytesPerRow * 8);
+    WORD fh = (WORD)gfx->Rows;
+    WORD dx = floor->_screen[0] + SOFFX + (WORD)floor->_width / 2 - fw / 2;
+    WORD dy = floor->_screen[1] + SOFFX + (WORD)floor->_height - fh;
+    WORD sx = 0;
+    WORD sy = 0;
+    WORD dw = fw;
+    WORD dh = fh;
+    const WORD viewR = SOFFX + VIEW_W;
+    const WORD viewB = SOFFX + VIEW_H;
+
+    if (dx < SOFFX) {
+        sx = (WORD)(sx + (SOFFX - dx));
+        dw = (WORD)(dw - (SOFFX - dx));
+        dx = SOFFX;
+    }
+    if (dy < SOFFX) {
+        sy = (WORD)(sy + (SOFFX - dy));
+        dh = (WORD)(dh - (SOFFX - dy));
+        dy = SOFFX;
+    }
+    if (dx + dw > viewR)
+        dw = (WORD)(viewR - dx);
+    if (dy + dh > viewB)
+        dh = (WORD)(viewB - dy);
+    if (sx < 0)
+        sx = 0;
+    if (sy < 0)
+        sy = 0;
+    if (sx + dw > fw)
+        dw = (WORD)(fw - sx);
+    if (sy + dh > fh)
+        dh = (WORD)(fh - sy);
+    if (dw <= 0 || dh <= 0)
+        return;
+
+    blitUnsafeCopyMask(gfx, sx, sy, pBuf, dx, dy, dw, dh, (UBYTE *)msk->Planes[0]);
+}
+
+static void blitSpriteOnFloor(tBitMap *pBuf, tWallGfx *floor, tBitMap *gfx, tBitMap *msk)
+{
+    WORD fw = (WORD)floor->_width;
+    WORD fh = (WORD)floor->_height;
+    WORD iw = (WORD)(gfx->BytesPerRow * 8);
+    WORD ih = (WORD)gfx->Rows;
+    WORD dx = floor->_screen[0] + SOFFX + fw / 2 - iw / 2;
+    WORD dy = floor->_screen[1] + SOFFX + fh - ih;
+    WORD sx = 0;
+    WORD sy = 0;
+    WORD dw = iw;
+    WORD dh = ih;
+    const WORD viewR = SOFFX + VIEW_W;
+    const WORD viewB = SOFFX + VIEW_H;
+
+    if (dx < SOFFX) {
+        sx = (WORD)(sx + (SOFFX - dx));
+        dw = (WORD)(dw - (SOFFX - dx));
+        dx = SOFFX;
+    }
+    if (dy < SOFFX) {
+        sy = (WORD)(sy + (SOFFX - dy));
+        dh = (WORD)(dh - (SOFFX - dy));
+        dy = SOFFX;
+    }
+    if (dx + dw > viewR)
+        dw = (WORD)(viewR - dx);
+    if (dy + dh > viewB)
+        dh = (WORD)(viewB - dy);
+    if (sx < 0)
+        sx = 0;
+    if (sy < 0)
+        sy = 0;
+    if (sx + dw > iw)
+        dw = (WORD)(iw - sx);
+    if (sy + dh > ih)
+        dh = (WORD)(ih - sy);
+    if (dw <= 0 || dh <= 0)
+        return;
+    blitUnsafeCopyMask(gfx, sx, sy, pBuf, dx, dy, dw, dh, (UBYTE *)msk->Planes[0]);
+}
+
 static void drawGroundItemPlaceholder(tBitMap *pBuf, tWallGfx *floor, UBYTE itemIdx)
 {
     WORD fw = (WORD)floor->_width;
@@ -59,6 +354,18 @@ static void drawGroundItemPlaceholder(tBitMap *pBuf, tWallGfx *floor, UBYTE item
         return;
     UBYTE color = (UBYTE)(40 + (itemIdx % 8));
     blitRect(pBuf, sx, sy, (UWORD)iw, (UWORD)ih, color);
+}
+
+static void drawGroundItemAt(tBitMap *pBuf, tWallGfx *floor, UBYTE itemIdx, BYTE slotTy)
+{
+    tBitMap *gfx = NULL;
+    tBitMap *msk = NULL;
+    if (!itemGfxFloor(itemIdx, monsterDepthForSlot(slotTy), &gfx, &msk)
+        || !gfx || !msk || !msk->Planes[0]) {
+        drawGroundItemPlaceholder(pBuf, floor, itemIdx);
+        return;
+    }
+    blitSpriteOnFloor(pBuf, floor, gfx, msk);
 }
 
 // Define cookie mode for better performance
@@ -376,6 +683,59 @@ void viewportPickAtScreen(tGameState *pGameState, UWORD screenX, UWORD screenY, 
         }
     }
 
+    /* A pad in front of you is walked onto. Clicking it is the same step. */
+    if (doorCell == MAZE_EVENT_TRIGGER)
+    {
+        for (UBYTE i = 0; i < 18; i++)
+        {
+            tWallGfx *g;
+            WORD x0, y0;
+            if (!slotValid[i] || slotCx[i] != doorX || slotCy[i] != doorY)
+                continue;
+            g = findFloorGfxForSlot(pWallset, slotTx[i], slotTy[i]);
+            if (floorPropAt(pGameState, doorX, doorY) == PROP_LIFT
+                || floorPropAt(pGameState, doorX, doorY) == PROP_EXIT) {
+                /* The whole floor strip in front of you, and the old tall prop box. */
+                tWallGfx *hit = g;
+                tWallGfx *tall = findTypedGfxForSlot(pWallset, slotTx[i], slotTy[i], MAZE_EVENT_TRIGGER);
+                if (hit) {
+                    x0 = hit->_screen[0] + SOFFX;
+                    y0 = hit->_screen[1] + SOFFX;
+                    if (bx >= x0 && by >= y0 && bx < x0 + (WORD)hit->_width && by < y0 + (WORD)hit->_height) {
+                        pick->kind = VIEWPORT_PICK_FLOOR_AHEAD;
+                        pick->cellX = doorX;
+                        pick->cellY = doorY;
+                        return;
+                    }
+                }
+                if (tall) {
+                    x0 = tall->_screen[0] + SOFFX;
+                    y0 = tall->_screen[1] + SOFFX;
+                    if (bx >= x0 && by >= y0 && bx < x0 + (WORD)tall->_width && by < y0 + (WORD)tall->_height) {
+                        pick->kind = VIEWPORT_PICK_FLOOR_AHEAD;
+                        pick->cellX = doorX;
+                        pick->cellY = doorY;
+                        return;
+                    }
+                }
+                continue;
+            }
+            if (!g)
+                g = findTypedGfxForSlot(pWallset, slotTx[i], slotTy[i], MAZE_EVENT_TRIGGER);
+            if (!g)
+                continue;
+            x0 = g->_screen[0] + SOFFX;
+            y0 = g->_screen[1] + SOFFX;
+            if (bx >= x0 && by >= y0 && bx < x0 + (WORD)g->_width && by < y0 + (WORD)g->_height)
+            {
+                pick->kind = VIEWPORT_PICK_FLOOR_AHEAD;
+                pick->cellX = doorX;
+                pick->cellY = doorY;
+                return;
+            }
+        }
+    }
+
     for (int i = 17; i >= 0; i--)
     {
         if (!slotValid[i])
@@ -534,33 +894,30 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
             }
         }
         
-        // Check if this cell is a charger (maze data = 5 = MAZE_EVENT_TRIGGER)
-        // and render indicator on floor if it's a battery charger event
-        if (wmi == MAZE_EVENT_TRIGGER)  // MAZE_EVENT_TRIGGER is 5
-        {
-            tMazeEvent* pEvent = mazeFindEventAtPosition(pMaze, px + x, py + y);
-            if (pEvent && pEvent->_eventType == EVENT_BATTERY_CHARGER)
-            {
-                // Draw charger indicator on the floor - find floor rendering position
-                for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
-                {
-                    if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1] && pWallset->_tileset[w]->_type == 0)
-                    {
-                        // This is a floor tile - draw charger indicator in center
-                        WORD centerX = pWallset->_tileset[w]->_screen[0] + SOFFX + (pWallset->_tileset[w]->_width / 2) - 4;
-                        WORD centerY = pWallset->_tileset[w]->_screen[1] + SOFFX + pWallset->_tileset[w]->_height - 12;
-                        blitRect(pCurrentBuffer, centerX, centerY, 8, 8, 34); // Green square indicator (32+2, using wallset color range)
-                        break;
-                    }
-                }
-            }
-        }
+        UBYTE prop = PROP_NONE;
+        if (wmi == MAZE_EVENT_TRIGGER)
+            prop = floorPropAt(pGameState, slotCx[i], slotCy[i]);
 
         for (UBYTE w = 0; w < pWallset->_tilesetCount; ++w)
         {
             if (tx == pWallset->_tileset[w]->_location[0] && ty == pWallset->_tileset[w]->_location[1])
             {
-                if ((wmi == pWallset->_tileset[w]->_type) || (wmi == MAZE_DOOR_OPEN && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_DOOR_LOCKED && pWallset->_tileset[w]->_type == 0) || (wmi == MAZE_EVENT_TRIGGER && pWallset->_tileset[w]->_type == 0))
+                UBYTE tileType = pWallset->_tileset[w]->_type;
+                /* Locked cells are type 4. The wallset stores the door panel as
+                 * type 2, so a locked door used to draw as bare floor until it
+                 * opened and the cell type changed.
+                 * Type 5 is one picture. Only the charger wears it. */
+                UBYTE drawTile = (UBYTE)(wmi == tileType);
+                if (drawTile && wmi == MAZE_EVENT_TRIGGER && tileType == MAZE_EVENT_TRIGGER
+                    && prop != PROP_CHARGER)
+                    drawTile = 0;
+                if ((wmi == MAZE_DOOR_LOCKED && tileType == MAZE_DOOR)
+                    || (wmi == MAZE_DOOR_OPEN && tileType == 0)
+                    || (wmi == MAZE_DOOR && tileType == 0)
+                    || (wmi == MAZE_DOOR_LOCKED && tileType == 0)
+                    || (wmi == MAZE_EVENT_TRIGGER && tileType == 0))
+                    drawTile = 1;
+                if (drawTile)
                 {
                     UBYTE doorWidth = pWallset->_tileset[w]->_width;
                     UBYTE doorHeight = pWallset->_tileset[w]->_height;
@@ -594,6 +951,23 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         }
 
         slotWmi[i] = wmi;
+
+        if (prop != PROP_NONE)
+            drawFloorProp(pCurrentBuffer, pWallset, tx, ty, prop);
+
+        if (wmi == MAZE_FLOOR || wmi == MAZE_DOOR_OPEN || wmi == MAZE_EVENT_TRIGGER) {
+            tWallGfx *floorGfx = findFloorGfxForSlot(pWallset, tx, ty);
+            tMonsterList *ml = pGameState->m_pMonsterList;
+            if (floorGfx && ml) {
+                for (UBYTE mi = 0; mi < ml->_numMonsters; mi++) {
+                    tMonster *mon = ml->_monsters[mi];
+                    if (!mon || mon->_state == MONSTER_STATE_DEAD)
+                        continue;
+                    if (mon->_partyPosX == slotCx[i] && mon->_partyPosY == slotCy[i])
+                        drawMonsterAt(pCurrentBuffer, floorGfx, mon, ty, pGameState);
+                }
+            }
+        }
     }
 
     for (UBYTE i = 0; i < 18; i++)
@@ -611,24 +985,11 @@ void drawView(tGameState *pGameState, tBitMap *pCurrentBuffer)
         UBYTE cx = slotCx[i];
         UBYTE cy = slotCy[i];
 
-        tMonsterList *ml = pGameState->m_pMonsterList;
-        if (ml)
-        {
-            for (UBYTE mi = 0; mi < ml->_numMonsters; mi++)
-            {
-                tMonster *mon = ml->_monsters[mi];
-                if (!mon || mon->_state == MONSTER_STATE_DEAD)
-                    continue;
-                if (mon->_partyPosX == cx && mon->_partyPosY == cy)
-                    drawMonsterPlaceholder(pCurrentBuffer, floorGfx, mon);
-            }
-        }
-
         tGroundItemList *gl = &pGameState->m_groundItems;
         for (UBYTE gi = 0; gi < gl->count; gi++)
         {
             if (gl->items[gi].x == cx && gl->items[gi].y == cy)
-                drawGroundItemPlaceholder(pCurrentBuffer, floorGfx, gl->items[gi].itemIdx);
+                drawGroundItemAt(pCurrentBuffer, floorGfx, gl->items[gi].itemIdx, slotTy[i]);
         }
     }
 }

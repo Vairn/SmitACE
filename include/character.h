@@ -87,3 +87,22 @@ void characterPartySwap(tCharacterParty* characterParty, UBYTE partyPos1, UBYTE 
 
 /** If party has no members, add one default hero (for combat / item use). */
 void characterPartyEnsureDefaultHero(tCharacterParty* characterParty);
+
+/** Number of members whose HP is above zero. */
+UBYTE characterPartyGetAliveCount(tCharacterParty* characterParty);
+
+/** First living member, or NULL when the whole party is down. */
+tCharacter* characterPartyGetAlive(tCharacterParty* characterParty);
+
+/** Non-zero when the party has members and every one of them is dead. */
+UBYTE characterPartyAllDead(tCharacterParty* characterParty);
+
+/** Total XP needed to reach the next level from the given level. */
+UWORD characterXpToNextLevel(UBYTE ubLevel);
+
+/**
+ * Award experience and apply any level-ups earned.
+ * Grows _MaxHP/_Attack/_Defense and refills _HP on each level gained.
+ * @return number of levels gained (0 when no level-up).
+ */
+UBYTE characterAwardXp(tCharacter* character, UWORD uwAmount);

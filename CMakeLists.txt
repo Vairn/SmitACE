@@ -21,8 +21,9 @@ if(ACE_HOST)
 endif()
 set(ACE_USE_AGA_FEATURES ON CACHE BOOL "Enable ACE AGA feature set" FORCE)
 set(ACE_USE_ECS_FEATURES ON CACHE BOOL "Enable ACE ECS feature set" FORCE)
-set(ACE_DEBUG ON)
-set(ACE_DEBUG_UAE ON)
+set(ACE_DEBUG ON CACHE BOOL "Build with ACE-specific debug/safety functionality." FORCE)
+set(ACE_DEBUG_UAE ON CACHE BOOL "With ACE_DEBUG enabled, output log to UAE console." FORCE)
+set(ACE_DEBUG_SERIAL ON CACHE BOOL "With ACE_DEBUG enabled, output log to serial port." FORCE)
 if(ACE_HOST)
 	set(CMAKE_C_STANDARD 11)
 	if(WIN32 AND EXISTS "C:/msys64/ucrt64")
@@ -179,5 +180,53 @@ if(ACE_HOST)
 			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${_SDL2_DLL}" "$<TARGET_FILE_DIR:${SMITE_EXECUTABLE}>"
 			COMMENT "Copy SDL2.dll next to smite"
 		)
+	endif()
+
+	# Headless smoke test: boots the game with no window, injects a real click on
+	# the title screen, and asserts gameplay starts. Run after building:
+	#   cmake --build build/Native --target smoke_test
+	if(WIN32)
+		add_custom_target(smoke_test
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_host_test.ps1"
+			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+			COMMENT "Headless host smoke test (title click -> gameplay)"
+			USES_TERMINAL
+		)
+		add_dependencies(smoke_test ${SMITE_EXECUTABLE})
+
+		# Level-change + IF-sensor tests. Both install a fixture into data/ and
+		# restore it afterwards.
+		add_custom_target(test_levelchange
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_levelchange_test.ps1"
+			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+			COMMENT "EVENT_CHANGELEVEL end-to-end test"
+			USES_TERMINAL
+		)
+		add_dependencies(test_levelchange ${SMITE_EXECUTABLE})
+
+		add_custom_target(test_sensors
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_sensor_test.ps1"
+			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+			COMMENT "IF sensor test (ITEMS_ON_POS)"
+			USES_TERMINAL
+		)
+		add_dependencies(test_sensors ${SMITE_EXECUTABLE})
+
+		# Everything green at once. Run this before committing gameplay/script work.
+		add_custom_target(test_all
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_host_test.ps1"
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_levelchange_test.ps1"
+			COMMAND powershell -ExecutionPolicy Bypass -File
+				"${CMAKE_SOURCE_DIR}/tools/test/run_sensor_test.ps1"
+			WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+			COMMENT "All headless host tests"
+			USES_TERMINAL
+		)
+		add_dependencies(test_all ${SMITE_EXECUTABLE})
 	endif()
 endif()

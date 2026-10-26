@@ -1,6 +1,10 @@
 #include "formats.hpp"
+#include "stb_image.h"
+#include <algorithm>
 #include <cstring>
+#include <filesystem>
 #include <fstream>
+#include <system_error>
 
 bool readRawFile(const std::string &path, std::vector<unsigned char> &out, std::string &err)
 {
@@ -238,6 +242,79 @@ bool loadMaze(const std::string &path, MazeFile &m, std::string &err)
 	return true;
 }
 
+void loadBuiltinDemoMaze(MazeFile &m)
+{
+	static const unsigned char map[1024] = {
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+		1,0,0,3,0,3,0,0,1,0,0,0,0,1,0,1,0,0,0,1,0,6,1,0,0,1,0,2,0,3,0,0,
+		1,0,0,1,0,1,0,0,1,0,0,0,0,1,0,1,1,0,0,1,0,1,1,0,0,1,1,1,2,1,1,1,
+		1,1,1,1,0,1,1,1,1,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,5,0,0,0,0,1,
+		1,0,0,2,0,2,0,0,1,1,1,1,0,1,1,1,1,1,2,1,1,1,1,1,2,1,1,1,1,2,1,1,
+		1,0,0,1,0,1,0,0,1,0,0,0,0,1,0,0,0,2,0,0,0,1,0,0,0,0,1,0,0,0,0,1,
+		1,1,1,1,0,1,1,1,1,5,1,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,2,0,1,1,0,1,
+		1,0,0,2,0,2,0,0,1,1,1,2,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,
+		1,0,0,1,0,1,0,0,1,0,0,0,0,5,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,
+		1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,0,0,1,0,1,1,1,1,1,0,0,1,0,1,1,0,1,
+		1,0,0,2,0,2,0,0,1,0,0,1,0,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,
+		1,0,0,1,0,1,0,5,1,0,0,0,0,0,1,0,0,1,0,1,0,1,0,1,0,0,1,0,0,0,0,1,
+		1,1,1,1,0,1,1,1,1,1,1,2,1,1,1,0,0,1,1,1,0,1,1,1,0,0,1,0,0,1,0,1,
+		1,0,0,2,0,2,0,0,1,0,2,0,0,0,2,0,0,2,0,0,0,0,0,2,0,0,2,0,1,1,0,1,
+		1,0,0,1,0,1,0,0,1,1,1,0,1,1,1,0,0,1,1,1,0,1,1,1,0,0,1,0,0,1,0,1,
+		1,1,1,1,0,1,1,1,1,0,0,5,0,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,
+		1,0,0,2,0,2,0,0,1,0,1,1,1,0,1,0,0,1,0,0,0,0,0,1,0,0,1,0,0,1,0,1,
+		1,0,0,1,0,1,0,0,1,0,0,1,0,0,1,0,0,1,0,1,1,1,5,1,0,0,1,0,1,1,0,1,
+		1,1,1,1,0,1,1,1,1,0,0,1,0,0,1,5,0,1,0,0,0,0,0,1,0,0,1,0,0,0,0,1,
+		1,0,0,2,0,2,0,0,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,0,0,1,1,1,1,1,1,
+		1,5,0,1,0,1,0,0,1,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,0,0,0,1,1,
+		1,1,1,1,0,1,1,1,1,1,1,1,1,1,1,1,1,1,2,2,1,5,1,3,1,1,1,1,0,1,0,1,
+		1,0,0,2,0,2,0,0,1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,1,0,0,0,1,
+		1,0,0,1,0,1,0,0,1,0,0,0,2,0,0,0,2,0,0,0,0,1,1,1,1,0,1,1,1,1,2,1,
+		1,1,1,1,0,1,1,1,1,1,1,1,1,1,2,1,1,1,2,1,1,1,0,0,0,0,0,0,0,1,0,1,
+		1,0,0,2,0,2,0,0,1,5,1,1,0,1,0,1,0,0,0,0,1,1,0,1,1,1,1,1,0,1,0,1,
+		1,5,0,1,0,1,0,0,1,0,5,1,0,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0,1,
+		1,1,1,1,0,1,1,0,1,0,1,1,0,0,0,1,0,1,0,0,1,1,0,1,1,1,1,1,0,1,0,1,
+		1,0,0,2,0,1,1,1,1,0,1,1,0,0,0,1,0,0,1,0,0,1,0,0,0,1,0,0,0,1,0,1,
+		1,0,0,1,0,1,0,0,0,0,0,0,0,1,0,1,0,1,0,0,1,1,0,1,1,1,1,1,0,1,0,1,
+		1,1,1,1,0,2,0,1,0,0,1,1,0,1,0,1,0,0,1,0,0,1,0,0,5,1,5,0,0,1,5,1,
+		1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,
+	};
+	m = MazeFile();
+	m.width = 32;
+	m.height = 32;
+	m.cells.assign(map, map + 1024);
+	m.cols.assign(1024, 0);
+	m.floors.assign(1024, 0);
+	const char *msg = "You trigger a pressure plate.";
+	m.strings.push_back(std::vector<unsigned char>(msg, msg + 30));
+	auto add = [&](int x, int y, int type, unsigned char a, unsigned char b, int n) {
+		MazeEvent ev;
+		ev.x = x;
+		ev.y = y;
+		ev.type = type;
+		ev.data.push_back(a);
+		if (n > 1)
+			ev.data.push_back(b);
+		m.events.push_back(std::move(ev));
+	};
+	add(27, 3, 10, 27, 3, 2);
+	add(9, 6, 10, 9, 6, 2);
+	add(14, 8, 10, 14, 8, 2);
+	add(12, 15, 10, 12, 15, 2);
+	for (int y = 0; y < 32; y++) {
+		for (int x = 0; x < 32; x++) {
+			if (m.cells[(size_t)y * 32 + (size_t)x] != 5)
+				continue;
+			bool taken = false;
+			for (const MazeEvent &ev : m.events) {
+				if (ev.x == x && ev.y == y)
+					taken = true;
+			}
+			if (!taken)
+				add(x, y, 221, 25, 0, 1);
+		}
+	}
+}
+
 bool saveMaze(const std::string &path, const MazeFile &m, std::string &err)
 {
 	std::vector<unsigned char> o;
@@ -411,7 +488,7 @@ bool loadWallsetMain(const std::string &path, WallsetFile &w, std::string &err)
 		int wc = d[off++];
 		w.tilesPerGroup.push_back(wc);
 		for (int k = 0; k < wc; k++) {
-			if (off + 18 > d.size()) { err = "tile"; return false; }
+			if (off + 16 > d.size()) { err = "tile"; return false; }
 			WallsetFile::Tile t;
 			t.type = d[off++]; t.setIndex = d[off++];
 			t.loc[0] = (char)d[off++]; t.loc[1] = (char)d[off++];
@@ -430,19 +507,19 @@ bool loadWallsetMain(const std::string &path, WallsetFile &w, std::string &err)
 bool decodeAcePlanar(const std::vector<unsigned char> &fileData, const unsigned char *palRgb, int palColors,
 	std::vector<unsigned char> &rgbaOut, int &outW, int &outH, std::string &err)
 {
-	if (fileData.size() < 8) { err = "bm small"; return false; }
+	if (fileData.size() < 9) { err = "bm small"; return false; }
 	std::uint16_t uw = readBe16(fileData.data());
 	std::uint16_t uh = readBe16(fileData.data() + 2);
 	int bpp = fileData[4];
 	int ver = fileData[5];
 	int flags = fileData[6];
-	(void)flags;
 	if (ver != 0) { err = "bm ver"; return false; }
-	size_t hdr = 8;
-	if (fileData.size() < hdr) { err = "bm hdr"; return false; }
+	/* ACE bitmapCreateFromFd: width, height, depth, version, flags, then 2 unused bytes. */
+	size_t hdr = 9;
 	outW = uw; outH = uh;
 	int stride = (uw + 7) / 8;
 	size_t planeSz = (size_t)stride * uh;
+	bool interleaved = (flags & 1) != 0;
 	if (bpp < 1 || bpp > 8) { err = "bpp"; return false; }
 	if (hdr + planeSz * (size_t)bpp > fileData.size()) { err = "bm planes"; return false; }
 	rgbaOut.assign((size_t)uw * uh * 4, 0);
@@ -452,7 +529,9 @@ bool decodeAcePlanar(const std::vector<unsigned char> &fileData, const unsigned 
 			int byteOff = y * stride + (x >> 3);
 			int cidx = 0;
 			for (int p = 0; p < bpp; p++) {
-				size_t po = hdr + (size_t)p * planeSz + byteOff;
+				size_t po = interleaved
+					? hdr + ((size_t)y * (size_t)bpp + (size_t)p) * (size_t)stride + (size_t)byteOff
+					: hdr + (size_t)p * planeSz + byteOff;
 				int bitv = (fileData[po] >> bit) & 1;
 				cidx |= bitv << p;
 			}
@@ -466,5 +545,402 @@ bool decodeAcePlanar(const std::vector<unsigned char> &fileData, const unsigned 
 			}
 		}
 	}
+	return true;
+}
+
+/** Height of the front wall or door at this slot. The floor strip is too short to stand a creature on. */
+static int frontOpeningHeight(const WallsetFile &w, int locY)
+{
+	int best = 0;
+	for (const auto &t : w.tiles) {
+		if ((int)t.loc[0] != 0 || (int)t.loc[1] != locY)
+			continue;
+		if (t.type != 1 && t.type != 2 && t.type != 3)
+			continue;
+		if ((int)t.h > best)
+			best = (int)t.h;
+	}
+	return best;
+}
+
+static int nearestPalette(int r, int g, int b, const unsigned char *pal, int palN)
+{
+	int n = palN < 32 ? palN : 32;
+	int best = 0;
+	int bestD = 1 << 30;
+	if (n < 1)
+		return 0;
+	for (int i = 0; i < n; i++) {
+		int dr = r - (int)pal[i * 3];
+		int dg = g - (int)pal[i * 3 + 1];
+		int db = b - (int)pal[i * 3 + 2];
+		int d = dr * dr + dg * dg + db * db;
+		if (d < bestD) {
+			bestD = d;
+			best = i;
+		}
+	}
+	return best;
+}
+
+static void appendAceBitmap(std::vector<unsigned char> &out, int w, int h, int bpp,
+	const std::vector<unsigned char> &indices)
+{
+	writeBe16(out, (std::uint16_t)w);
+	writeBe16(out, (std::uint16_t)h);
+	out.push_back((unsigned char)bpp);
+	out.push_back(0);
+	out.push_back(0);
+	out.push_back(0);
+	out.push_back(0);
+	int stride = w / 8;
+	for (int plane = 0; plane < bpp; plane++) {
+		for (int y = 0; y < h; y++) {
+			for (int xb = 0; xb < stride; xb++) {
+				unsigned char byte = 0;
+				for (int bit = 0; bit < 8; bit++) {
+					int x = xb * 8 + bit;
+					unsigned char idx = indices[(size_t)y * (size_t)w + (size_t)x];
+					if (idx & (unsigned char)(1u << plane))
+						byte |= (unsigned char)(0x80u >> bit);
+				}
+				out.push_back(byte);
+			}
+		}
+	}
+}
+
+static bool readAceIndices(const std::vector<unsigned char> &file, int &w, int &h, int &bpp,
+	std::vector<unsigned char> &indices, std::string &err)
+{
+	if (file.size() < 9) { err = "bm small"; return false; }
+	w = readBe16(file.data());
+	h = readBe16(file.data() + 2);
+	bpp = file[4];
+	if (file[5] != 0) { err = "bm ver"; return false; }
+	if (w <= 0 || h <= 0 || bpp < 1 || bpp > 8) { err = "bm size"; return false; }
+	int stride = (w + 7) / 8;
+	size_t planeSz = (size_t)stride * (size_t)h;
+	bool interleaved = (file[6] & 1) != 0;
+	size_t hdr = 9;
+	if (hdr + planeSz * (size_t)bpp > file.size()) { err = "bm planes"; return false; }
+	indices.assign((size_t)w * (size_t)h, 0);
+	for (int y = 0; y < h; y++) {
+		for (int x = 0; x < w; x++) {
+			int bit = 7 - (x & 7);
+			int byteOff = y * stride + (x >> 3);
+			int cidx = 0;
+			for (int p = 0; p < bpp; p++) {
+				size_t po = interleaved
+					? hdr + ((size_t)y * (size_t)bpp + (size_t)p) * (size_t)stride + (size_t)byteOff
+					: hdr + (size_t)p * planeSz + (size_t)byteOff;
+				if ((file[po] >> bit) & 1)
+					cidx |= 1 << p;
+			}
+			indices[(size_t)y * (size_t)w + (size_t)x] = (unsigned char)cidx;
+		}
+	}
+	return true;
+}
+
+bool loadMonsterFramePreview(const std::string &bmPath, const std::string &mskPath,
+	const unsigned char *palRgb, int palColors, MonsterFrameImage &out, std::string &err)
+{
+	out = MonsterFrameImage{};
+	std::vector<unsigned char> bm;
+	if (!readRawFile(bmPath, bm, err))
+		return false;
+	int w = 0, h = 0, bpp = 0;
+	std::vector<unsigned char> idx;
+	if (!readAceIndices(bm, w, h, bpp, idx, err))
+		return false;
+	std::vector<unsigned char> maskIdx;
+	int mw = 0, mh = 0, mbpp = 0;
+	std::vector<unsigned char> msk;
+	std::string merr;
+	bool haveMask = readRawFile(mskPath, msk, merr) && readAceIndices(msk, mw, mh, mbpp, maskIdx, merr)
+		&& mw == w && mh == h;
+	int n = palColors < 32 ? palColors : 32;
+	if (!palRgb || n < 1) { err = "no palette"; return false; }
+	out.w = w;
+	out.h = h;
+	out.rgba.assign((size_t)w * (size_t)h * 4, 0);
+	for (int i = 0; i < w * h; i++) {
+		unsigned char c = idx[(size_t)i];
+		if ((int)c >= n)
+			c = 0;
+		unsigned char *px = &out.rgba[(size_t)i * 4];
+		px[0] = palRgb[c * 3];
+		px[1] = palRgb[c * 3 + 1];
+		px[2] = palRgb[c * 3 + 2];
+		px[3] = (!haveMask || maskIdx[(size_t)i]) ? 255 : 0;
+	}
+	return true;
+}
+
+static const int kMonsterSourcePoses = 6;
+static const int kMonsterBakedFrames = 8;
+
+struct MonsterSlice {
+	int x = 0;
+	int y = 0;
+	int w = 0;
+	int h = 0;
+};
+
+static bool pixelIsBackground(const unsigned char *p, bool useKey, int keyR, int keyG, int keyB)
+{
+	if (p[3] < 128)
+		return true;
+	if (!useKey)
+		return false;
+	int dr = (int)p[0] - keyR;
+	int dg = (int)p[1] - keyG;
+	int db = (int)p[2] - keyB;
+	if (dr < 0)
+		dr = -dr;
+	if (dg < 0)
+		dg = -dg;
+	if (db < 0)
+		db = -db;
+	return dr <= 28 && dg <= 28 && db <= 28;
+}
+
+static bool sliceMonsterStrip(const unsigned char *src, int srcW, int srcH, std::vector<MonsterSlice> &out, std::string &err)
+{
+	out.clear();
+	if (srcW < 1 || srcH < 1) {
+		err = "Empty image";
+		return false;
+	}
+	const unsigned char *corner = src;
+	bool useKey = corner[3] >= 128;
+	int keyR = corner[0];
+	int keyG = corner[1];
+	int keyB = corner[2];
+	auto bgAt = [&](int x, int y) {
+		return pixelIsBackground(src + ((size_t)y * (size_t)srcW + (size_t)x) * 4, useKey, keyR, keyG, keyB);
+	};
+	std::vector<int> rowUse(srcH, 0);
+	for (int y = 0; y < srcH; y++) {
+		for (int x = 0; x < srcW; x++) {
+			if (!bgAt(x, y)) {
+				rowUse[y] = 1;
+				break;
+			}
+		}
+	}
+	int rowBands = 0;
+	int row0 = 0;
+	int row1 = 0;
+	for (int y = 0; y < srcH;) {
+		while (y < srcH && !rowUse[y])
+			y++;
+		if (y >= srcH)
+			break;
+		int y0 = y;
+		while (y < srcH && rowUse[y])
+			y++;
+		rowBands++;
+		row0 = y0;
+		row1 = y;
+	}
+	if (rowBands == 0) {
+		err = "No creature pixels in the picture";
+		return false;
+	}
+	if (rowBands > 1) {
+		err = "This picture has more than one row. Import one creature, poses in a single row.";
+		return false;
+	}
+	std::vector<char> seen((size_t)srcW * (size_t)srcH, 0);
+	std::vector<int> qx;
+	std::vector<int> qy;
+	qx.reserve(256);
+	qy.reserve(256);
+	for (int y = row0; y < row1; y++) {
+		for (int x = 0; x < srcW; x++) {
+			size_t start = (size_t)y * (size_t)srcW + (size_t)x;
+			if (seen[start] || bgAt(x, y))
+				continue;
+			int x0 = x, x1 = x, y0 = y, y1 = y;
+			qx.clear();
+			qy.clear();
+			qx.push_back(x);
+			qy.push_back(y);
+			seen[start] = 1;
+			for (size_t q = 0; q < qx.size(); q++) {
+				int cx = qx[q];
+				int cy = qy[q];
+				if (cx < x0) x0 = cx;
+				if (cx > x1) x1 = cx;
+				if (cy < y0) y0 = cy;
+				if (cy > y1) y1 = cy;
+				for (int dy = -1; dy <= 1; dy++) {
+					for (int dx = -1; dx <= 1; dx++) {
+						int nx = cx + dx;
+						int ny = cy + dy;
+						if (nx < 0 || ny < row0 || nx >= srcW || ny >= row1)
+							continue;
+						size_t ni = (size_t)ny * (size_t)srcW + (size_t)nx;
+						if (seen[ni] || bgAt(nx, ny))
+							continue;
+						seen[ni] = 1;
+						qx.push_back(nx);
+						qy.push_back(ny);
+					}
+				}
+			}
+			MonsterSlice s;
+			s.x = x0;
+			s.y = y0;
+			s.w = x1 - x0 + 1;
+			s.h = y1 - y0 + 1;
+			out.push_back(s);
+		}
+	}
+	std::sort(out.begin(), out.end(), [](const MonsterSlice &a, const MonsterSlice &b) {
+		return a.x < b.x;
+	});
+	if ((int)out.size() != kMonsterSourcePoses) {
+		err = "Found " + std::to_string(out.size()) + " separate shapes, need 6 poses in one row: Front, Back, Left1, Left2, Attack1, Attack2. Each pose has to be one connected figure. Right is mirrored from the left poses.";
+		return false;
+	}
+	return true;
+}
+
+bool exportMonsterFrames(const std::string &pngPath, const std::string &outDir, int typeIndex,
+	const WallsetFile &wallset, std::string &err, std::vector<MonsterFrameImage> *outFrames)
+{
+	int palN = (int)wallset.palette.size() / 3;
+	if (palN < 1) { err = "Load a wallset before importing a creature"; return false; }
+	if (typeIndex < 0 || typeIndex > 63) { err = "monster index out of range"; return false; }
+	int srcW = 0, srcH = 0, srcComp = 0;
+	unsigned char *src = stbi_load(pngPath.c_str(), &srcW, &srcH, &srcComp, 4);
+	(void)srcComp;
+	if (!src || srcW < 1 || srcH < 1) {
+		if (src)
+			stbi_image_free(src);
+		err = "Cannot read image: " + pngPath;
+		return false;
+	}
+	std::vector<MonsterSlice> slices;
+	if (!sliceMonsterStrip(src, srcW, srcH, slices, err)) {
+		stbi_image_free(src);
+		return false;
+	}
+	std::error_code ec;
+	std::filesystem::create_directories(outDir, ec);
+	if (ec) {
+		stbi_image_free(src);
+		err = "Cannot create " + outDir;
+		return false;
+	}
+	for (int f = 0; f < 16; f++) {
+		for (int d = 0; d < 4; d++) {
+			std::string stem = outDir + "/" + std::to_string(typeIndex) + "_f" + std::to_string(f) + "_d" + std::to_string(d);
+			std::filesystem::remove(stem + ".bm", ec);
+			std::filesystem::remove(stem + ".msk", ec);
+		}
+	}
+	for (int d = 0; d < 4; d++) {
+		std::string stem = outDir + "/" + std::to_string(typeIndex) + "_d" + std::to_string(d);
+		std::filesystem::remove(stem + ".bm", ec);
+		std::filesystem::remove(stem + ".msk", ec);
+	}
+	int maxH = 1;
+	for (const MonsterSlice &s : slices) {
+		if (s.h > maxH)
+			maxH = s.h;
+	}
+	const unsigned char *pal = wallset.palette.data();
+	const int yDelta[4] = {0, -1, -2, -3};
+	const int fallbackH[4] = {128, 106, 64, 48};
+	if (outFrames)
+		outFrames->clear();
+	const int poseSlice[8] = {0, 1, 2, 3, 2, 3, 4, 5};
+	const int poseMirror[8] = {0, 0, 0, 0, 1, 1, 0, 0};
+	for (int depth = 0; depth < 4; depth++) {
+		int opening = frontOpeningHeight(wallset, yDelta[depth]);
+		int dstH = fallbackH[depth];
+		if (opening > 0)
+			dstH = opening * 2 / 3;
+		else if (depth == 0) {
+			int ahead = frontOpeningHeight(wallset, -1);
+			if (ahead > 0)
+				dstH = ahead * 4 / 5;
+		}
+		if (dstH < 1)
+			dstH = 1;
+		if (dstH > 128)
+			dstH = 128;
+		for (int frame = 0; frame < kMonsterBakedFrames; frame++) {
+			const MonsterSlice &slice = slices[(size_t)poseSlice[frame]];
+			bool mirror = poseMirror[frame] != 0;
+			int contentH = (int)((long)slice.h * dstH / maxH);
+			int contentW = (int)((long)slice.w * dstH / maxH);
+			if (contentH < 1)
+				contentH = 1;
+			if (contentW < 1)
+				contentW = 1;
+			if (contentH > dstH)
+				contentH = dstH;
+			int pad = (16 - (contentW & 15)) & 15;
+			int totalW = contentW + pad;
+			int left = pad / 2;
+			int top = dstH - contentH;
+			std::vector<unsigned char> indices((size_t)totalW * (size_t)dstH, 0);
+			std::vector<unsigned char> opaque((size_t)totalW * (size_t)dstH, 0);
+			for (int y = 0; y < contentH; y++) {
+				int sy = slice.y + (int)((long)y * slice.h / contentH);
+				if (sy >= slice.y + slice.h)
+					sy = slice.y + slice.h - 1;
+				for (int x = 0; x < contentW; x++) {
+					int sampleX = mirror ? (contentW - 1 - x) : x;
+					int sx = slice.x + (int)((long)sampleX * slice.w / contentW);
+					if (sx >= slice.x + slice.w)
+						sx = slice.x + slice.w - 1;
+					const unsigned char *p = src + ((size_t)sy * (size_t)srcW + (size_t)sx) * 4;
+					int dx = left + x;
+					int dy = top + y;
+					size_t di = (size_t)dy * (size_t)totalW + (size_t)dx;
+					if (pixelIsBackground(p, src[3] >= 128, src[0], src[1], src[2]))
+						continue;
+					opaque[di] = 1;
+					indices[di] = (unsigned char)nearestPalette(p[0], p[1], p[2], pal, palN);
+				}
+			}
+			std::vector<unsigned char> bm;
+			std::vector<unsigned char> msk;
+			appendAceBitmap(bm, totalW, dstH, 5, indices);
+			appendAceBitmap(msk, totalW, dstH, 1, opaque);
+			std::string stem = outDir + "/" + std::to_string(typeIndex) + "_f" + std::to_string(frame) + "_d" + std::to_string(depth);
+			if (!writeFile(stem + ".bm", bm, err) || !writeFile(stem + ".msk", msk, err)) {
+				stbi_image_free(src);
+				return false;
+			}
+			if (outFrames && depth == 0) {
+				MonsterFrameImage fr;
+				fr.w = totalW;
+				fr.h = dstH;
+				fr.rgba.assign((size_t)totalW * (size_t)dstH * 4, 0);
+				int n = palN < 32 ? palN : 32;
+				for (int i = 0; i < totalW * dstH; i++) {
+					unsigned char *px = &fr.rgba[(size_t)i * 4];
+					if (!opaque[(size_t)i])
+						continue;
+					unsigned char c = indices[(size_t)i];
+					if ((int)c >= n)
+						c = 0;
+					px[0] = pal[c * 3];
+					px[1] = pal[c * 3 + 1];
+					px[2] = pal[c * 3 + 2];
+					px[3] = 255;
+				}
+				outFrames->push_back(std::move(fr));
+			}
+		}
+	}
+	stbi_image_free(src);
 	return true;
 }

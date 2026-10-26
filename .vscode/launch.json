@@ -7,7 +7,7 @@
 			"request": "launch",
 			"name": "Amiga 500",
 			"config": "A500",
-			"program": "${workspaceFolder}/build/unknown/smite",
+			"program": "${workspaceFolder}/build/GCC Bartman m68k Win32 020/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-130.rom",
 			"internalConsoleOptions": "openOnSessionStart"
 		},
@@ -16,7 +16,7 @@
 			"request": "launch",
 			"name": "Amiga 1200",
 			"config": "A1200",
-			"program": "${workspaceFolder}/build/unknown/smite",
+			"program": "${workspaceFolder}/build/GCC Bartman m68k Win32 020/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
 			"internalConsoleOptions": "openOnSessionStart"
 		},
@@ -25,7 +25,7 @@
 			"request": "launch",
 			"name": "Amiga 1200-4mb",
 			"config": "A1200-FAST",
-			"program": "${workspaceFolder}/build/unknown/smite",
+			"program": "${workspaceFolder}/build/GCC Bartman m68k Win32 020/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
 			"internalConsoleOptions": "openOnSessionStart"
 		},
@@ -35,7 +35,7 @@
 			"request": "launch",
 		"name": "Amiga 4000",
 			"config": "A4000",
-			"program": "${workspaceFolder}/build/unknown/smite",
+			"program": "${workspaceFolder}/build/GCC Bartman m68k Win32 020/smite",
 			"kickstart": "C:\\Users\\Public\\Documents\\Amiga Files\\Shared\\rom\\amiga-os-310-a1200.rom",
 			"internalConsoleOptions": "openOnSessionStart"
 		},
@@ -53,6 +53,30 @@
 				}
 			],
 			"preLaunchTask": "build native",
+			"MIMode": "gdb",
+			"miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+			"setupCommands": [
+				{
+					"description": "Enable pretty-printing for gdb",
+					"text": "-enable-pretty-printing",
+					"ignoreFailures": true
+				}
+			]
+		},
+		{
+			"type": "cppdbg",
+			"request": "launch",
+			"name": "Smite editor",
+			"program": "${workspaceFolder}/build/smite_editor/smite_editor.exe",
+			"args": [],
+			"cwd": "${workspaceFolder}/build/Native",
+			"environment": [
+				{
+					"name": "PATH",
+					"value": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			],
+			"preLaunchTask": "build editor",
 			"MIMode": "gdb",
 			"miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
 			"setupCommands": [

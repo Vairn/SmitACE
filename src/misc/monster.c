@@ -3,6 +3,7 @@
 #include <ace/managers/memory.h>
 #include <ace/managers/system.h>
 #include <ace/managers/log.h>
+#include <ace/utils/bitmap.h>
 #include <ace/utils/disk_file.h>
 #include <ace/utils/file.h>
 #include <string.h>
@@ -10,6 +11,8 @@
 #define MONSTER_DEF_MAX 64
 /** Seconds between monster move attempts (monsterUpdate runs on the ~1 Hz world tick). */
 #define MONSTER_MOVE_PERIOD 2
+
+#define MONSTER_NAME_MAX 24
 
 typedef struct {
 	UBYTE ubLevel;
@@ -21,10 +24,254 @@ typedef struct {
 	UBYTE ubFleeThreshold;
 	UBYTE dropTable[8];
 	UBYTE dropChance[8];
+	/** Display name from monsters.dat; empty falls back to "monster". */
+	char szName[MONSTER_NAME_MAX];
 } tMonsterDef;
 
 static tMonsterDef s_defs[MONSTER_DEF_MAX];
 static UBYTE s_defCount;
+
+#define MONSTER_GFX_DEPTHS 4
+#define MONSTER_GFX_FRAMES 16
+
+typedef struct {
+	UBYTE ubFrames;
+	tBitMap *pFrame[MONSTER_GFX_FRAMES][MONSTER_GFX_DEPTHS];
+	tBitMap *pMask[MONSTER_GFX_FRAMES][MONSTER_GFX_DEPTHS];
+} tMonsterGfx;
+
+static tMonsterGfx s_gfx[MONSTER_DEF_MAX];
+static UBYTE s_gfxCount;
+static UBYTE s_animClock;
+
+static UWORD monsterAppend(char *dst, UWORD len, UWORD cap, const char *src)
+{
+	if (!dst || cap == 0)
+		return 0;
+	if (!src)
+		src = "";
+	while (*src && len + 1 < cap)
+		dst[len++] = *src++;
+	dst[len] = '\0';
+	return len;
+}
+
+static UWORD monsterAppendUbyte(char *dst, UWORD len, UWORD cap, UBYTE v)
+{
+	char tmp[4];
+	UWORD n = 0;
+	if (v >= 100)
+		tmp[n++] = (char)('0' + v / 100);
+	if (v >= 10)
+		tmp[n++] = (char)('0' + (v / 10) % 10);
+	tmp[n++] = (char)('0' + v % 10);
+	tmp[n] = '\0';
+	return monsterAppend(dst, len, cap, tmp);
+}
+
+/** Directory of sidecar frames: alongside monsters.dat, in a monsters/ folder. */
+static void monsterGfxBaseDir(const char *szDatPath, char *out, UWORD cap)
+{
+	UWORD len = 0;
+	if (out && cap)
+		out[0] = '\0';
+	if (szDatPath && szDatPath[0]) {
+		UWORD lastSlash = 0;
+		UBYTE hasSlash = 0;
+		for (UWORD i = 0; szDatPath[i]; i++) {
+			if (szDatPath[i] == '/' || szDatPath[i] == '\\') {
+				lastSlash = i;
+				hasSlash = 1;
+			}
+		}
+		if (hasSlash) {
+			UWORD n = (UWORD)(lastSlash + 1);
+			if (n >= cap)
+				n = (UWORD)(cap - 1);
+			for (UWORD k = 0; k < n; k++)
+				out[k] = szDatPath[k];
+			len = n;
+			out[len] = '\0';
+		}
+	} else {
+		len = monsterAppend(out, 0, cap, "data/");
+	}
+	monsterAppend(out, len, cap, "monsters/");
+}
+
+static void monsterGfxFree(void)
+{
+	for (UBYTE i = 0; i < s_gfxCount && i < MONSTER_DEF_MAX; i++) {
+		for (UBYTE f = 0; f < MONSTER_GFX_FRAMES; f++) {
+			for (UBYTE d = 0; d < MONSTER_GFX_DEPTHS; d++) {
+				if (s_gfx[i].pFrame[f][d]) {
+					bitmapDestroy(s_gfx[i].pFrame[f][d]);
+					s_gfx[i].pFrame[f][d] = NULL;
+				}
+				if (s_gfx[i].pMask[f][d]) {
+					bitmapDestroy(s_gfx[i].pMask[f][d]);
+					s_gfx[i].pMask[f][d] = NULL;
+				}
+			}
+		}
+	}
+	memset(s_gfx, 0, sizeof(s_gfx));
+	s_gfxCount = 0;
+}
+
+static UBYTE monsterGfxLoadPair(const char *bmPath, const char *mskPath, tBitMap **ppGfx, tBitMap **ppMsk)
+{
+	tBitMap *gfx;
+	tBitMap *msk;
+	if (!diskFileExists(bmPath) || !diskFileExists(mskPath))
+		return 0;
+	gfx = bitmapCreateFromPath(bmPath, 0);
+	msk = bitmapCreateFromPath(mskPath, 0);
+	if (gfx && msk && msk->Planes[0]) {
+		*ppGfx = gfx;
+		*ppMsk = msk;
+		return 1;
+	}
+	if (gfx)
+		bitmapDestroy(gfx);
+	if (msk)
+		bitmapDestroy(msk);
+	return 0;
+}
+
+static void monsterGfxLoadAll(const char *szDatPath)
+{
+	char dir[256];
+	monsterGfxFree();
+	monsterGfxBaseDir(szDatPath, dir, (UWORD)sizeof(dir));
+	s_gfxCount = s_defCount;
+	s_animClock = 0;
+	for (UBYTE i = 0; i < s_defCount; i++) {
+		UBYTE frames = 0;
+		for (UBYTE f = 0; f < MONSTER_GFX_FRAMES; f++) {
+			UBYTE any = 0;
+			for (UBYTE d = 0; d < MONSTER_GFX_DEPTHS; d++) {
+				char path[256];
+				char maskPath[256];
+				UWORD len = monsterAppend(path, 0, (UWORD)sizeof(path), dir);
+				len = monsterAppendUbyte(path, len, (UWORD)sizeof(path), i);
+				len = monsterAppend(path, len, (UWORD)sizeof(path), "_f");
+				len = monsterAppendUbyte(path, len, (UWORD)sizeof(path), f);
+				len = monsterAppend(path, len, (UWORD)sizeof(path), "_d");
+				len = monsterAppendUbyte(path, len, (UWORD)sizeof(path), d);
+				monsterAppend(path, len, (UWORD)sizeof(path), ".bm");
+				len = monsterAppend(maskPath, 0, (UWORD)sizeof(maskPath), dir);
+				len = monsterAppendUbyte(maskPath, len, (UWORD)sizeof(maskPath), i);
+				len = monsterAppend(maskPath, len, (UWORD)sizeof(maskPath), "_f");
+				len = monsterAppendUbyte(maskPath, len, (UWORD)sizeof(maskPath), f);
+				len = monsterAppend(maskPath, len, (UWORD)sizeof(maskPath), "_d");
+				len = monsterAppendUbyte(maskPath, len, (UWORD)sizeof(maskPath), d);
+				monsterAppend(maskPath, len, (UWORD)sizeof(maskPath), ".msk");
+				if (monsterGfxLoadPair(path, maskPath, &s_gfx[i].pFrame[f][d], &s_gfx[i].pMask[f][d]))
+					any = 1;
+			}
+			if (!any)
+				break;
+			frames++;
+		}
+		if (frames == 0) {
+			UBYTE any = 0;
+			for (UBYTE d = 0; d < MONSTER_GFX_DEPTHS; d++) {
+				char path[256];
+				char maskPath[256];
+				UWORD len = monsterAppend(path, 0, (UWORD)sizeof(path), dir);
+				len = monsterAppendUbyte(path, len, (UWORD)sizeof(path), i);
+				len = monsterAppend(path, len, (UWORD)sizeof(path), "_d");
+				len = monsterAppendUbyte(path, len, (UWORD)sizeof(path), d);
+				monsterAppend(path, len, (UWORD)sizeof(path), ".bm");
+				len = monsterAppend(maskPath, 0, (UWORD)sizeof(maskPath), dir);
+				len = monsterAppendUbyte(maskPath, len, (UWORD)sizeof(maskPath), i);
+				len = monsterAppend(maskPath, len, (UWORD)sizeof(maskPath), "_d");
+				len = monsterAppendUbyte(maskPath, len, (UWORD)sizeof(maskPath), d);
+				monsterAppend(maskPath, len, (UWORD)sizeof(maskPath), ".msk");
+				if (monsterGfxLoadPair(path, maskPath, &s_gfx[i].pFrame[0][d], &s_gfx[i].pMask[0][d]))
+					any = 1;
+			}
+			if (any)
+				frames = 1;
+		}
+		s_gfx[i].ubFrames = frames;
+		if (frames)
+			logWrite("monsters: type %u poses %u\n", (unsigned)i, (unsigned)frames);
+	}
+}
+
+void monsterGfxGet(UBYTE typeId, UBYTE frame, UBYTE depth, tBitMap **ppGfx, tBitMap **ppMask)
+{
+	if (ppGfx)
+		*ppGfx = NULL;
+	if (ppMask)
+		*ppMask = NULL;
+	if (!ppGfx || !ppMask)
+		return;
+	if (typeId >= s_gfxCount || frame >= MONSTER_GFX_FRAMES || depth >= MONSTER_GFX_DEPTHS)
+		return;
+	*ppGfx = s_gfx[typeId].pFrame[frame][depth];
+	*ppMask = s_gfx[typeId].pMask[frame][depth];
+}
+
+UBYTE monsterGfxFrameCount(UBYTE typeId)
+{
+	if (typeId >= s_gfxCount)
+		return 0;
+	return s_gfx[typeId].ubFrames;
+}
+
+static UBYTE monsterViewDir(UBYTE partyFacing, UBYTE monX, UBYTE monY, UBYTE partyX, UBYTE partyY)
+{
+	int dx = (int)partyX - (int)monX;
+	int dy = (int)partyY - (int)monY;
+	int adx = dx < 0 ? -dx : dx;
+	int ady = dy < 0 ? -dy : dy;
+	if (dx == 0 && dy == 0)
+		return (UBYTE)((partyFacing + 2) & 3);
+	if (adx > ady)
+		return (UBYTE)(dx > 0 ? 1 : 3);
+	if (ady > adx)
+		return (UBYTE)(dy > 0 ? 2 : 0);
+	if ((partyFacing & 1) != 0)
+		return (UBYTE)(dx > 0 ? 1 : 3);
+	return (UBYTE)(dy > 0 ? 2 : 0);
+}
+
+UBYTE monsterGfxPick(UBYTE typeId, UBYTE attacking, UBYTE monFacing, UBYTE partyFacing,
+	UBYTE monX, UBYTE monY, UBYTE partyX, UBYTE partyY)
+{
+	UBYTE n;
+	UBYTE viewDir;
+	UBYTE rel;
+	if (typeId >= s_gfxCount)
+		return 0;
+	n = s_gfx[typeId].ubFrames;
+	if (n <= 1)
+		return 0;
+	if (n < 8) {
+		if (attacking)
+			return (UBYTE)(n - 1);
+		return (UBYTE)(s_animClock % (UBYTE)(n - 1));
+	}
+	if (attacking)
+		return (UBYTE)(6 + (s_animClock & 1));
+	viewDir = monsterViewDir(partyFacing, monX, monY, partyX, partyY);
+	rel = (UBYTE)((viewDir - (monFacing & 3)) & 3);
+	if (rel == 2)
+		return 1;
+	if (rel == 3)
+		return (UBYTE)(2 + (s_animClock & 1));
+	if (rel == 1)
+		return (UBYTE)(4 + (s_animClock & 1));
+	return 0;
+}
+
+void monsterGfxAdvance(void)
+{
+	s_animClock++;
+}
 
 // Simple random number generator (LCG)
 static ULONG s_randSeed = 1;
@@ -99,6 +346,14 @@ static UBYTE monsterTryStepDir(tMaze *maze, tMonster *self, const tMonsterList *
 		return 0;
 	self->_partyPosX = ux;
 	self->_partyPosY = uy;
+	if (sdy < 0)
+		self->_facing = 0;
+	else if (sdx > 0)
+		self->_facing = 1;
+	else if (sdy > 0)
+		self->_facing = 2;
+	else if (sdx < 0)
+		self->_facing = 3;
 	return 1;
 }
 
@@ -221,6 +476,7 @@ static void monsterTableSetBuiltins(void)
 	s_defs[0].uwExperience = 10;
 	s_defs[0].ubAggroRange = 5;
 	s_defs[0].ubFleeThreshold = 20;
+	monsterAppend(s_defs[0].szName, 0, MONSTER_NAME_MAX, "rat");
 
 	s_defs[1].ubLevel = 5;
 	s_defs[1].uwMaxHP = 100;
@@ -229,6 +485,7 @@ static void monsterTableSetBuiltins(void)
 	s_defs[1].uwExperience = 200;
 	s_defs[1].ubAggroRange = 5;
 	s_defs[1].ubFleeThreshold = 20;
+	monsterAppend(s_defs[1].szName, 0, MONSTER_NAME_MAX, "guard");
 
 	s_defs[2].ubLevel = 3;
 	s_defs[2].uwMaxHP = 50;
@@ -237,10 +494,19 @@ static void monsterTableSetBuiltins(void)
 	s_defs[2].uwExperience = 50;
 	s_defs[2].ubAggroRange = 5;
 	s_defs[2].ubFleeThreshold = 20;
+	monsterAppend(s_defs[2].szName, 0, MONSTER_NAME_MAX, "skeleton");
+}
+
+const char *monsterNameForType(UBYTE typeId)
+{
+	if (typeId < s_defCount && s_defs[typeId].szName[0])
+		return s_defs[typeId].szName;
+	return "monster";
 }
 
 void monsterTableClear(void)
 {
+	monsterGfxFree();
 	s_defCount = 0;
 	memset(s_defs, 0, sizeof(s_defs));
 }
@@ -250,12 +516,14 @@ void monsterTableLoad(const char *szPath)
 	monsterTableClear();
 	if (!szPath || !szPath[0]) {
 		monsterTableSetBuiltins();
+		monsterGfxLoadAll(szPath);
 		return;
 	}
 	tFile *f = diskFileOpen(szPath, DISK_FILE_MODE_READ, 1);
 	if (!f) {
 		logWrite("monsters: '%s' not found, using built-in table\n", szPath);
 		monsterTableSetBuiltins();
+		monsterGfxLoadAll(szPath);
 		return;
 	}
 	char magic[4];
@@ -263,6 +531,7 @@ void monsterTableLoad(const char *szPath)
 	if (magic[0] != 'M' || magic[1] != 'O' || magic[2] != 'N' || magic[3] != 'S') {
 		fileClose(f);
 		monsterTableSetBuiltins();
+		monsterGfxLoadAll(szPath);
 		return;
 	}
 	UBYTE ver = 0;
@@ -270,6 +539,7 @@ void monsterTableLoad(const char *szPath)
 	if (ver != 1) {
 		fileClose(f);
 		monsterTableSetBuiltins();
+		monsterGfxLoadAll(szPath);
 		return;
 	}
 	UBYTE count = 0;
@@ -277,6 +547,7 @@ void monsterTableLoad(const char *szPath)
 	if (count == 0 || count > MONSTER_DEF_MAX) {
 		fileClose(f);
 		monsterTableSetBuiltins();
+		monsterGfxLoadAll(szPath);
 		return;
 	}
 	for (UBYTE i = 0; i < count; i++) {
@@ -294,14 +565,20 @@ void monsterTableLoad(const char *szPath)
 		fileReadBytes(f, d->dropChance, 8);
 		UBYTE nlen = 0;
 		fileReadBytes(f, &nlen, 1);
+		if (nlen >= MONSTER_NAME_MAX)
+			nlen = MONSTER_NAME_MAX - 1;
+		d->szName[0] = '\0';
 		for (UBYTE k = 0; k < nlen; k++) {
-			UBYTE b;
+			UBYTE b = 0;
 			fileReadBytes(f, &b, 1);
+			d->szName[k] = (char)b;
 		}
+		d->szName[nlen] = '\0';
 	}
 	s_defCount = count;
 	fileClose(f);
 	logWrite("monsters: loaded %u from %s\n", (unsigned)s_defCount, szPath);
+	monsterGfxLoadAll(szPath);
 }
 
 static void monsterCreateLegacySwitch(tMonster *monster, UBYTE monsterType)
@@ -462,10 +739,10 @@ UBYTE monsterUpdate(tMonster *monster, tMaze *maze, tCharacterParty *party, tMon
 	return moved;
 }
 
-void monsterAttack(tMonster* monster, tCharacter* target)
+UWORD monsterAttack(tMonster* monster, tCharacter* target)
 {
     if (!monster || !target || monster->_state == MONSTER_STATE_DEAD)
-        return;
+        return 0;
 
     // Simple attack calculation
     UWORD damage = monster->_base._Attack;
@@ -486,14 +763,14 @@ void monsterAttack(tMonster* monster, tCharacter* target)
     else
     {
         target->_HP = 0;
-        // Handle character death
     }
+    return damage;
 }
 
-void monsterTakeDamageFromCharacter(tMonster* monster, tCharacter* attacker)
+UWORD monsterTakeDamageFromCharacter(tMonster* monster, tCharacter* attacker)
 {
     if (!monster || !attacker || monster->_state == MONSTER_STATE_DEAD)
-        return;
+        return 0;
 
     UWORD damage = attacker->_Attack;
     if (damage > monster->_base._Defense)
@@ -505,6 +782,7 @@ void monsterTakeDamageFromCharacter(tMonster* monster, tCharacter* attacker)
         monster->_base._HP -= damage;
     else
         monster->_base._HP = 0;
+    return damage;
 }
 
 void monsterDropLoot(tMonster* monster, tInventory* pInventory)

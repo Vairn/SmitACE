@@ -12,6 +12,7 @@ typedef enum {
     VIEWPORT_PICK_DOOR_AHEAD,
     VIEWPORT_PICK_WALL_BUTTON,
     VIEWPORT_PICK_DOOR_BUTTON,
+    VIEWPORT_PICK_FLOOR_AHEAD,
 } tViewportPickKind;
 
 typedef struct {

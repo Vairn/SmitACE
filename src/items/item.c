@@ -4,20 +4,138 @@
 #include <ace/managers/log.h>
 #include <ace/utils/file.h>
 #include <ace/utils/disk_file.h>
+#include <ace/utils/bitmap.h>
 #include <string.h>
+#include <stdio.h>
+
+#define ITEM_GFX_MAX 16
+#define ITEM_GFX_DEPTHS 4
+
+static tBitMap *s_floorGfx[ITEM_GFX_MAX][ITEM_GFX_DEPTHS];
+static tBitMap *s_floorMsk[ITEM_GFX_MAX][ITEM_GFX_DEPTHS];
+static tBitMap *s_hudGfx[ITEM_GFX_MAX];
+static tBitMap *s_hudMsk[ITEM_GFX_MAX];
+
+static void itemGfxFreeBitmaps(void)
+{
+    for (UBYTE i = 0; i < ITEM_GFX_MAX; i++) {
+        for (UBYTE d = 0; d < ITEM_GFX_DEPTHS; d++) {
+            if (s_floorGfx[i][d]) {
+                bitmapDestroy(s_floorGfx[i][d]);
+                s_floorGfx[i][d] = NULL;
+            }
+            if (s_floorMsk[i][d]) {
+                bitmapDestroy(s_floorMsk[i][d]);
+                s_floorMsk[i][d] = NULL;
+            }
+        }
+        if (s_hudGfx[i]) {
+            bitmapDestroy(s_hudGfx[i]);
+            s_hudGfx[i] = NULL;
+        }
+        if (s_hudMsk[i]) {
+            bitmapDestroy(s_hudMsk[i]);
+            s_hudMsk[i] = NULL;
+        }
+    }
+}
+
+static UBYTE itemGfxLoadPair(const char *bmPath, const char *mskPath, tBitMap **ppGfx, tBitMap **ppMsk)
+{
+    tBitMap *gfx;
+    tBitMap *msk;
+    if (!diskFileExists(bmPath) || !diskFileExists(mskPath))
+        return 0;
+    gfx = bitmapCreateFromPath(bmPath, 0);
+    msk = bitmapCreateFromPath(mskPath, 0);
+    if (gfx && msk && msk->Planes[0]) {
+        *ppGfx = gfx;
+        *ppMsk = msk;
+        return 1;
+    }
+    if (gfx)
+        bitmapDestroy(gfx);
+    if (msk)
+        bitmapDestroy(msk);
+    return 0;
+}
+
+void itemGfxDestroy(void)
+{
+    itemGfxFreeBitmaps();
+}
+
+void itemGfxLoad(void)
+{
+    UBYTE n;
+    itemGfxFreeBitmaps();
+    n = s_ubItemCount;
+    if (n > ITEM_GFX_MAX)
+        n = ITEM_GFX_MAX;
+    for (UBYTE i = 0; i < n; i++) {
+        for (UBYTE d = 0; d < ITEM_GFX_DEPTHS; d++) {
+            char bm[40];
+            char msk[40];
+            sprintf(bm, "data/items/%u_d%u.bm", (unsigned)i, (unsigned)d);
+            sprintf(msk, "data/items/%u_d%u.msk", (unsigned)i, (unsigned)d);
+            itemGfxLoadPair(bm, msk, &s_floorGfx[i][d], &s_floorMsk[i][d]);
+        }
+        {
+            char bm[40];
+            char msk[40];
+            sprintf(bm, "data/items/%u_ui.bm", (unsigned)i);
+            sprintf(msk, "data/items/%u_ui.msk", (unsigned)i);
+            if (itemGfxLoadPair(bm, msk, &s_hudGfx[i], &s_hudMsk[i]))
+                logWrite("items: icon %u\n", (unsigned)i);
+        }
+    }
+}
+
+UBYTE itemGfxFloor(UBYTE itemIdx, UBYTE depth, tBitMap **ppGfx, tBitMap **ppMask)
+{
+    if (ppGfx)
+        *ppGfx = NULL;
+    if (ppMask)
+        *ppMask = NULL;
+    if (itemIdx >= ITEM_GFX_MAX || depth >= ITEM_GFX_DEPTHS)
+        return 0;
+    if (!s_floorGfx[itemIdx][depth] || !s_floorMsk[itemIdx][depth])
+        return 0;
+    if (ppGfx)
+        *ppGfx = s_floorGfx[itemIdx][depth];
+    if (ppMask)
+        *ppMask = s_floorMsk[itemIdx][depth];
+    return 1;
+}
+
+UBYTE itemGfxHud(UBYTE itemIdx, tBitMap **ppGfx, tBitMap **ppMask)
+{
+    if (ppGfx)
+        *ppGfx = NULL;
+    if (ppMask)
+        *ppMask = NULL;
+    if (itemIdx >= ITEM_GFX_MAX || !s_hudGfx[itemIdx] || !s_hudMsk[itemIdx])
+        return 0;
+    if (ppGfx)
+        *ppGfx = s_hudGfx[itemIdx];
+    if (ppMask)
+        *ppMask = s_hudMsk[itemIdx];
+    return 1;
+}
 
 tItem* s_vecItems = NULL;
 UBYTE s_ubItemCount = 0;
 
 void itemSystemInit(void)
 {
-    // Initialize item system - items will be loaded from data file
+    itemGfxDestroy();
     s_vecItems = NULL;
     s_ubItemCount = 0;
 }
 
 void itemSystemDestroy(void)
 {
+    itemGfxDestroy();
     if (s_vecItems)
     {
         // Free item names if allocated
@@ -59,6 +177,7 @@ static void createFallbackItems(void)
     s_vecItems[1].ubEquipSlot = 255;
     s_vecItems[1].pszName = (char*)memAllocFastClear(7);
     if (s_vecItems[1].pszName) { s_vecItems[1].pszName[0] = 'P'; s_vecItems[1].pszName[1] = 'o'; s_vecItems[1].pszName[2] = 't'; s_vecItems[1].pszName[3] = 'i'; s_vecItems[1].pszName[4] = 'o'; s_vecItems[1].pszName[5] = 'n'; }
+    itemGfxLoad();
 }
 
 void loadItems(const char* filename)
@@ -114,6 +233,7 @@ void loadItems(const char* filename)
     }
     fileClose(pFile);
     logWrite("Items: loaded %d items from %s\n", (int)s_ubItemCount, filename);
+    itemGfxLoad();
 }
 
 void saveItems(const char* filename)

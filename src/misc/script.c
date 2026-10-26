@@ -36,10 +36,75 @@ void pushStackFrame(UBYTE type, UWORD address, BOOL conditionMet);
 tStackFrame popStackFrame();
 BOOL isStackEmpty();
 
+/**
+ * How many operand bytes follow the [conditionType, operandType] pair.
+ *
+ * Most operands are "index/value, compare" = 2 bytes. Cell sensors
+ * (monsters/items/wall at a position) need "x, y, compare" = 3 bytes.
+ * This is what lets IF blocks grow new sensors without breaking existing
+ * payloads: a 2-byte operand keeps the old 4-byte condition layout.
+ */
+static UBYTE conditionOperandBytes(UBYTE operandType)
+{
+    switch (operandType) {
+    case EVENT_MONSTERS_ON_POS:
+    case EVENT_ITEMS_ON_POS:
+    case EVENT_WALL_NUMBER:
+        return 3;
+    default:
+        return 2;
+    }
+}
+
+/** Count living monsters on a maze cell. */
+static UWORD scriptMonstersAt(UBYTE x, UBYTE y)
+{
+    UWORD uwCount = 0;
+    if (!g_pGameState || !g_pGameState->m_pMonsterList)
+        return 0;
+    for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
+        tMonster *pMon = g_pGameState->m_pMonsterList->_monsters[i];
+        if (!pMon || pMon->_state == MONSTER_STATE_DEAD)
+            continue;
+        if (pMon->_partyPosX == x && pMon->_partyPosY == y)
+            uwCount++;
+    }
+    return uwCount;
+}
+
+/** Count ground item stacks on a maze cell. */
+static UWORD scriptGroundItemsAt(UBYTE x, UBYTE y)
+{
+    UWORD uwCount = 0;
+    if (!g_pGameState)
+        return 0;
+    const tGroundItemList *pList = &g_pGameState->m_groundItems;
+    for (UBYTE i = 0; i < pList->count; i++) {
+        if (pList->items[i].x == x && pList->items[i].y == y)
+            uwCount++;
+    }
+    return uwCount;
+}
+
+/** State for EVENT_ROLL_DICE; seeded once so runs differ between boots. */
+static ULONG s_ulScriptSeed = 0x1234567UL;
+
+/** Apply a comparison operator to an actual value and a wanted value. */
+static BOOL compareValue(UBYTE ubOp, UWORD uwActual, UWORD uwWanted)
+{
+    switch (ubOp) {
+    case EVENT_EQUAL:     return uwActual == uwWanted;
+    case EVENT_NOT_EQUAL: return uwActual != uwWanted;
+    case EVENT_GREATER:   return uwActual > uwWanted;
+    case EVENT_LESS:      return uwActual < uwWanted;
+    default:              return FALSE;
+    }
+}
+
 // Condition evaluation function
 BOOL evaluateCondition(tMaze *pMaze, UBYTE *conditionData, UBYTE dataSize)
 {
-    if (!conditionData || dataSize < 3) {
+    if (!conditionData || dataSize < 4) {
         logWrite("Invalid condition data\n");
         return FALSE;
     }
@@ -47,115 +112,136 @@ BOOL evaluateCondition(tMaze *pMaze, UBYTE *conditionData, UBYTE dataSize)
     UBYTE conditionType = conditionData[0];
     UBYTE operandType = conditionData[1];
     UBYTE operandValue = conditionData[2];
+    UBYTE ubOperandBytes = conditionOperandBytes(operandType);
     BOOL result = FALSE;
-    
-    switch (conditionType) {
-        case EVENT_EQUAL:
-            switch (operandType) {
-                case EVENT_LEVEL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bLocalFlags[operandValue] == conditionData[3]);
-                    }
-                    break;
-                case EVENT_GLOBAL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bGlobalFlags[operandValue] == conditionData[3]);
-                    }
-                    break;
-                case EVENT_PARTY_ON_POS:
-                    result = (g_pGameState->m_pCurrentParty->_PartyX == operandValue && 
-                             g_pGameState->m_pCurrentParty->_PartyY == conditionData[3]);
-                    break;
-                case EVENT_PARTY_DIRECTION:
-                    result = (g_pGameState->m_pCurrentParty->_PartyFacing == operandValue);
-                    break;
-                case EVENT_HAS_CLASS:
-                    if (g_pGameState->m_pCurrentParty) {
-                        for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
-                            if (g_pGameState->m_pCurrentParty->_characters[i] &&
-                                g_pGameState->m_pCurrentParty->_characters[i]->_Class == operandValue) {
-                                result = TRUE;
-                                break;
-                            }
-                        }
-                    }
-                    break;
-                case EVENT_HAS_RACE:
-                    if (g_pGameState->m_pCurrentParty) {
-                        for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
-                            if (g_pGameState->m_pCurrentParty->_characters[i] &&
-                                g_pGameState->m_pCurrentParty->_characters[i]->_Race == operandValue) {
-                                result = TRUE;
-                                break;
-                            }
-                        }
-                    }
-                    break;
-            }
-            break;
-            
-        case EVENT_GREATER:
-            switch (operandType) {
-                case EVENT_LEVEL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bLocalFlags[operandValue] > conditionData[3]);
-                    }
-                    break;
-                case EVENT_GLOBAL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bGlobalFlags[operandValue] > conditionData[3]);
-                    }
-                    break;
-            }
-            break;
-            
-        case EVENT_LESS:
-            switch (operandType) {
-                case EVENT_LEVEL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bLocalFlags[operandValue] < conditionData[3]);
-                    }
-                    break;
-                case EVENT_GLOBAL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bGlobalFlags[operandValue] < conditionData[3]);
-                    }
-                    break;
-            }
-            break;
-            
-        case EVENT_NOT_EQUAL:
-            switch (operandType) {
-                case EVENT_LEVEL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bLocalFlags[operandValue] != conditionData[3]);
-                    }
-                    break;
-                case EVENT_GLOBAL_FLAG:
-                    if (operandValue < 256) {
-                        result = (g_pGameState->m_bGlobalFlags[operandValue] != conditionData[3]);
-                    }
-                    break;
-            }
-            break;
+
+    if (dataSize < (UBYTE)(2 + ubOperandBytes)) {
+        logWrite("Truncated condition (operand %u)\n", (unsigned)operandType);
+        return FALSE;
     }
+    /*
+     * Operand layout after [conditionType][operandType]:
+     *   2 bytes -> [value][compare]
+     *   3 bytes -> [x][y][compare]   (cell sensors)
+     * So the compare byte is always the last one, and cell Y is the middle byte.
+     */
+    UBYTE compareTo = conditionData[1 + ubOperandBytes];
+    UBYTE cellX = operandValue;
+    UBYTE cellY = (ubOperandBytes >= 3) ? conditionData[3] : 0;
     
+    /* Resolve the operand to a number, then compare. Keeping the comparison in
+     * one place means a new operator or a new sensor only touches one switch. */
+    BOOL ubResolved = TRUE;
+    UWORD uwActual = 0;
+
+    switch (operandType) {
+    case EVENT_LEVEL_FLAG:
+        uwActual = g_pGameState ? g_pGameState->m_bLocalFlags[operandValue] : 0;
+        break;
+    case EVENT_GLOBAL_FLAG:
+        uwActual = g_pGameState ? g_pGameState->m_bGlobalFlags[operandValue] : 0;
+        break;
+    case EVENT_PARTY_ON_POS:
+        /* "at x,y": same result for every operator that makes sense here. */
+        if (!g_pGameState || !g_pGameState->m_pCurrentParty) {
+            uwActual = 0;
+            break;
+        }
+        uwActual = (g_pGameState->m_pCurrentParty->_PartyX == operandValue &&
+                    g_pGameState->m_pCurrentParty->_PartyY == compareTo) ? 1 : 0;
+        break;
+    case EVENT_PARTY_DIRECTION:
+        uwActual = g_pGameState && g_pGameState->m_pCurrentParty
+            ? g_pGameState->m_pCurrentParty->_PartyFacing : 0;
+        break;
+    case EVENT_MONSTERS_ON_POS:
+        /* x, y, compare - count monsters standing on that cell. */
+        uwActual = scriptMonstersAt(cellX, cellY);
+        logWrite("[script] MONSTERS_ON_POS(%u,%u)=%u compare=%u\n",
+            (unsigned)cellX, (unsigned)cellY, (unsigned)uwActual, (unsigned)compareTo);
+        break;
+    case EVENT_ITEMS_ON_POS:
+        uwActual = scriptGroundItemsAt(cellX, cellY);
+        break;
+    case EVENT_WALL_NUMBER:
+        uwActual = (pMaze && cellX < pMaze->_width && cellY < pMaze->_height)
+            ? pMaze->_mazeData[cellY * pMaze->_width + cellX] : 0;
+        break;
+    case EVENT_HAS_CLASS:
+        uwActual = 0;
+        if (g_pGameState && g_pGameState->m_pCurrentParty) {
+            for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
+                tCharacter *pChar = g_pGameState->m_pCurrentParty->_characters[i];
+                if (pChar && pChar->_Class == operandValue) {
+                    uwActual = 1;
+                    break;
+                }
+            }
+        }
+        break;
+    case EVENT_HAS_RACE:
+        uwActual = 0;
+        if (g_pGameState && g_pGameState->m_pCurrentParty) {
+            for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
+                tCharacter *pChar = g_pGameState->m_pCurrentParty->_characters[i];
+                if (pChar && pChar->_Race == operandValue) {
+                    uwActual = 1;
+                    break;
+                }
+            }
+        }
+        break;
+    case EVENT_PARTY_VISIBLE:
+        /* "party visible" means the party has at least one living member. */
+        uwActual = characterPartyGetAliveCount(g_pGameState
+            ? g_pGameState->m_pCurrentParty : NULL) > 0 ? 1 : 0;
+        break;
+    case EVENT_ROLL_DICE:
+        /* Operand byte is the die size (0 or 1 means d6). Compares against the
+         * roll, so "roll < 3" works as expected.
+         * Uses a local LCG: the game's rand() is only declared on Amiga builds,
+         * and script rolls do not need to share its sequence. */
+        {
+            UWORD uwSides = operandValue;
+            if (uwSides < 2)
+                uwSides = 6;
+            s_ulScriptSeed = s_ulScriptSeed * 1103515245UL + 12345UL;
+            uwActual = 1 + (UWORD)((s_ulScriptSeed >> 16) % uwSides);
+        }
+        break;
+    default:
+        ubResolved = FALSE;
+        logWrite("Unsupported condition operand %u\n", (unsigned)operandType);
+        break;
+    }
+
+    if (ubResolved) {
+        /* Cell sensors compare against the third operand byte; everything else
+         * against the (single) compare byte we already extracted. For the 3-byte
+         * cells the "compare" value is the desired count, encoded in byte 2 of
+         * the condition, so reuse compareTo consistently. */
+        result = compareValue(conditionType, uwActual, compareTo);
+    }
+
     // Handle logical operators if more data available
-    if (dataSize > 4) {
-        UBYTE logicalOp = conditionData[4];
-        BOOL nextResult = evaluateCondition(pMaze, &conditionData[5], dataSize - 5);
-        
-        switch (logicalOp) {
-            case EVENT_AND:
-                result = result && nextResult;
-                break;
-            case EVENT_OR:
-                result = result || nextResult;
-                break;
+    {
+        UBYTE ubConsumed = (UBYTE)(2 + ubOperandBytes); /* condition + operand + compare */
+        if (dataSize > (UBYTE)(ubConsumed + 1)) {
+            UBYTE logicalOp = conditionData[ubConsumed];
+            BOOL nextResult = evaluateCondition(pMaze, &conditionData[ubConsumed + 1],
+                (UBYTE)(dataSize - ubConsumed - 1));
+
+            switch (logicalOp) {
+                case EVENT_AND:
+                    result = result && nextResult;
+                    break;
+                case EVENT_OR:
+                    result = result || nextResult;
+                    break;
+            }
         }
     }
-    
-    
+
     return result;
 }
 
@@ -278,6 +364,9 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
                 messageId |= (UWORD)(pEvent->_eventData[1] << 8);
             char msgBuffer[512];
             if (mazeGetStringByIndex(pMaze, messageId, msgBuffer, sizeof(msgBuffer))) {
+                /* Mirror to the log: messages are screen-only otherwise, which
+                 * makes automated runs unable to see which branch ran. */
+                logWrite("[script] message %d: %s\n", (int)messageId, msgBuffer);
                 gameDisplayMessage(msgBuffer);
             } else {
                 logWrite("Showing message ID: %d (no string in maze table)\n", (int)messageId);
@@ -344,6 +433,9 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         }
         break;
         
+    /* Older files use ADDITEM/REMOVEITEM for the same thing as GIVE/TAKE. Treat
+     * them as aliases so existing content keeps working. */
+    case EVENT_ADDITEM:
     case EVENT_GIVEITEM:
         if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pInventory) {
             UBYTE itemType = pEvent->_eventData[0];
@@ -356,6 +448,7 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         }
         break;
         
+    case EVENT_REMOVEITEM:
     case EVENT_TAKEITEM:
         if (pEvent->_eventDataSize >= 1 && g_pGameState->m_pInventory) {
             UBYTE itemType = pEvent->_eventData[0];
@@ -451,8 +544,12 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
             if (pEvent->_eventDataSize >= 2)
                 xpAmount |= (UWORD)(pEvent->_eventData[1] << 8);
             for (UBYTE i = 0; i < g_pGameState->m_pCurrentParty->_numCharacters; i++) {
-                if (g_pGameState->m_pCurrentParty->_characters[i])
-                    g_pGameState->m_pCurrentParty->_characters[i]->_Experience += xpAmount;
+                tCharacter *pChar = g_pGameState->m_pCurrentParty->_characters[i];
+                if (!pChar)
+                    continue;
+                UBYTE ubGained = characterAwardXp(pChar, xpAmount);
+                if (ubGained)
+                    logWrite("Script XP: level %u reached\n", (unsigned)pChar->_Level);
             }
         }
         break;
@@ -486,14 +583,46 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
     case EVENT_IF:
         {
             BOOL conditionResult = evaluateCondition(pMaze, pEvent->_eventData, pEvent->_eventDataSize);
+            /* An IF that follows an ELSE_GOTO: the ELSE_GOTO already handled the
+             * true branch, so a true condition must skip forward instead. */
+            if (g_pGameState->_scriptState._skippingBlock &&
+                g_pGameState->_scriptState._inElseGoto) {
+                g_pGameState->_scriptState._skippingBlock = !conditionResult;
+                g_pGameState->_scriptState._inElseGoto = FALSE;
+                /* No stack frame: ELSE_GOTO owns the jump, not IF/ENDIF. */
+                logWrite("ELSE_GOTO IF %s\n", conditionResult ? "skips true branch" : "falls through");
+                break;
+            }
             g_pGameState->_scriptState._conditionMet = conditionResult;
-            
+
             if (!conditionResult) {
                 g_pGameState->_scriptState._skippingBlock = TRUE;
             }
-            
+
             pushStackFrame(1, g_pGameState->_scriptState._scriptProgramCounter, conditionResult);
             logWrite("IF condition evaluated to %s\n", conditionResult ? "TRUE" : "FALSE");
+        }
+        break;
+
+    case EVENT_ELSE_GOTO:
+        /*
+         * Compiled-script idiom: "IF <cond> GOTO <target>" is encoded as an IF
+         * whose false branch falls through to an ELSE_GOTO <target>. The IF has
+         * already decided; this opcode only jumps when the condition was false.
+         */
+        if (pEvent->_eventDataSize >= 1) {
+            BOOL ubCond = g_pGameState->_scriptState._conditionMet;
+            if (!ubCond) {
+                result.result = SCRIPT_RESULT_GOTO;
+                result.targetIndex = pEvent->_eventData[0];
+                g_pGameState->_scriptState._skippingBlock = FALSE;
+                g_pGameState->_scriptState._inElseGoto = FALSE;
+                logWrite("ELSE_GOTO taken -> %u\n", (unsigned)result.targetIndex);
+            } else {
+                /* Condition was true: keep running the true branch. */
+                g_pGameState->_scriptState._inElseGoto = FALSE;
+                logWrite("ELSE_GOTO skipped (condition true)\n");
+            }
         }
         break;
         
@@ -557,6 +686,18 @@ tScriptExecutionResult executeEvent(tMaze *pMaze, tMazeEvent *pEvent)
         }
         break;
         
+    case EVENT_CHANGELEVEL:
+        if (pEvent->_eventDataSize >= EVENT_CHANGELEVEL_DATA_SIZE) {
+            /* Defer the swap: the maze this script is executing against must
+             * stay alive until the interpreter returns to the game loop. */
+            g_ubRequestLevelId = pEvent->_eventData[0];
+            g_ubRequestLevel = 1;
+            logWrite("Change level requested: %u\n", (unsigned)g_ubRequestLevelId);
+        } else {
+            logWrite("EVENT_CHANGELEVEL: missing level index\n");
+        }
+        break;
+
     case EVENT_WIN:
         g_ubRequestWin = 1;
         break;

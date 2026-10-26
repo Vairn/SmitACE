@@ -85,6 +85,48 @@
 			"problemMatcher": []
 		},
 		{
+			"label": "configure editor",
+			"type": "shell",
+			"command": "cmake",
+			"group": "build",
+			"args": [
+				"-S",
+				"${workspaceFolder}/tools/smite_editor",
+				"-B",
+				"${workspaceFolder}/build/smite_editor",
+				"-G",
+				"Ninja",
+				"-DCMAKE_BUILD_TYPE=Debug",
+				"-DCMAKE_PREFIX_PATH=C:/msys64/ucrt64",
+				"-DCMAKE_C_COMPILER=C:/msys64/ucrt64/bin/gcc.exe",
+				"-DCMAKE_CXX_COMPILER=C:/msys64/ucrt64/bin/g++.exe"
+			],
+			"options": {
+				"env": {
+					"PATH": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "build editor",
+			"type": "shell",
+			"command": "cmake",
+			"group": "build",
+			"dependsOn": ["configure editor"],
+			"args": [
+				"--build",
+				"${workspaceFolder}/build/smite_editor",
+				"--parallel"
+			],
+			"options": {
+				"env": {
+					"PATH": "C:/msys64/ucrt64/bin;${env:PATH}"
+				}
+			},
+			"problemMatcher": ["$gcc"]
+		},
+		{
 			"label": "build native",
 			"type": "shell",
 			"command": "cmake",

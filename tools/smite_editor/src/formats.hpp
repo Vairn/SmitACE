@@ -65,6 +65,9 @@ struct MazeFile {
 bool loadMaze(const std::string &path, MazeFile &out, std::string &err);
 bool saveMaze(const std::string &path, const MazeFile &m, std::string &err);
 
+/** The maze the game builds when a level's maze path is empty. */
+void loadBuiltinDemoMaze(MazeFile &out);
+
 struct LvlEntities {
 	int version = 1;
 	struct WB { int x,y,wallSide,type,gfx,evt,esz; std::vector<unsigned char> ed; };
@@ -104,3 +107,24 @@ bool loadWallsetMain(const std::string &path, WallsetFile &out, std::string &err
 /** Decode ACE bitmap (.pln/.bm): non-interleaved, version 0. Returns RGBA 8bpp. */
 bool decodeAcePlanar(const std::vector<unsigned char> &fileData, const unsigned char *palRgb, int palColors,
 	std::vector<unsigned char> &rgbaOut, int &outW, int &outH, std::string &err);
+
+struct MonsterFrameImage {
+	int w = 0;
+	int h = 0;
+	std::vector<unsigned char> rgba;
+};
+
+/**
+ * Slice one PNG into 6 poses: Front, Back, Left1, Left2, Attack1, Attack2.
+ * Left1 and Left2 are mirrored into Right1 and Right2.
+ * Baked order is Front, Back, Left1, Left2, Right1, Right2, Attack1, Attack2.
+ * Each pose is written at four view distances as
+ * {outDir}/{typeIndex}_f{frame}_d{depth}.bm and .msk. Mask bit 1 is opaque.
+ * outFrames may be null. On success it receives the near-distance preview of each pose.
+ */
+bool exportMonsterFrames(const std::string &pngPath, const std::string &outDir, int typeIndex,
+	const WallsetFile &wallset, std::string &err, std::vector<MonsterFrameImage> *outFrames);
+
+/** Load one written frame pair for the editor preview. Missing files return false. */
+bool loadMonsterFramePreview(const std::string &bmPath, const std::string &mskPath,
+	const unsigned char *palRgb, int palColors, MonsterFrameImage &out, std::string &err);

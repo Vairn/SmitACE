@@ -39,6 +39,7 @@ Authoritative payload layouts for maze events consumed by `handleEvent()` / `exe
 | `EVENT_GOSUB` | 132 | ≥1 byte: target ordinal |
 | `EVENT_RETURN` | 133 | *(none)* |
 | `EVENT_BATTERY_CHARGER` | 221 | ≥1 byte: charges remaining (decremented in place) |
+| `EVENT_CHANGELEVEL` | 222 | 1 byte: level index in `game.smt`'s level list. Swaps the level; the party position is **not** preserved (the new level places the party at its own start). The swap is deferred to the game loop so the maze being scripted stays alive while the script runs. |
 
 Condition primitives (`EVENT_EQUAL`, `EVENT_LEVEL_FLAG`, …) are **not** meant to be executed as standalone `handleEvent` actions; they appear inside `EVENT_IF` data. See `evaluateCondition()` in `script.c`.
 

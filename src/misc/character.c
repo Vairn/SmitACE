@@ -62,9 +62,16 @@ void characterPartyAdd(tCharacterParty* characterParty, tCharacter* character)
 
 void characterPartyRemove(tCharacterParty* characterParty, UBYTE partyPos)
 {
+    if (!characterParty || !characterParty->_characters)
+        return;
+    if (partyPos >= characterParty->_numCharacters)
+        return;
     characterDestroy(characterParty->_characters[partyPos]);
-    characterParty->_characters[partyPos] = NULL;
+    /* Compact the array so the party never has holes in the middle. */
+    for (UBYTE i = partyPos; i + 1 < characterParty->_numCharacters; i++)
+        characterParty->_characters[i] = characterParty->_characters[i + 1];
     characterParty->_numCharacters--;
+    characterParty->_characters[characterParty->_numCharacters] = NULL;
 }
 
 void characterPartySwap(tCharacterParty* characterParty, UBYTE partyPos1, UBYTE partyPos2)
@@ -89,4 +96,81 @@ void characterPartyEnsureDefaultHero(tCharacterParty* characterParty)
     strncpy(hero->_Name, "Hero", sizeof(hero->_Name) - 1);
     hero->_Name[sizeof(hero->_Name) - 1] = '\0';
     characterPartyAdd(characterParty, hero);
+}
+
+UBYTE characterPartyGetAliveCount(tCharacterParty* characterParty)
+{
+    UBYTE ubAlive = 0;
+    if (!characterParty || !characterParty->_characters)
+        return 0;
+    for (UBYTE i = 0; i < characterParty->_numCharacters; i++) {
+        tCharacter* pChar = characterParty->_characters[i];
+        if (pChar && pChar->_HP > 0)
+            ubAlive++;
+    }
+    return ubAlive;
+}
+
+tCharacter* characterPartyGetAlive(tCharacterParty* characterParty)
+{
+    if (!characterParty || !characterParty->_characters)
+        return NULL;
+    for (UBYTE i = 0; i < characterParty->_numCharacters; i++) {
+        tCharacter* pChar = characterParty->_characters[i];
+        if (pChar && pChar->_HP > 0)
+            return pChar;
+    }
+    return NULL;
+}
+
+UBYTE characterPartyAllDead(tCharacterParty* characterParty)
+{
+    if (!characterParty || !characterParty->_characters || characterParty->_numCharacters == 0)
+        return 0;
+    return characterPartyGetAliveCount(characterParty) == 0;
+}
+
+/**
+ * Classic RPG curve, kept small enough for UWORD.
+ * L1->2 = 100, L2->3 = 300, L3->4 = 600, L4->5 = 1000, then 65535 cap.
+ */
+UWORD characterXpToNextLevel(UBYTE ubLevel)
+{
+    ULONG ulLevel = ubLevel ? ubLevel : 1;
+    ULONG ulNeed = 50ul * ulLevel * ulLevel + 50ul * ulLevel;
+    if (ulNeed > 65535ul)
+        ulNeed = 65535ul;
+    return (UWORD)ulNeed;
+}
+
+UBYTE characterAwardXp(tCharacter* character, UWORD uwAmount)
+{
+    if (!character)
+        return 0;
+
+    ULONG ulXp = (ULONG)character->_Experience + uwAmount;
+    if (ulXp > 65535ul)
+        ulXp = 65535ul;
+    character->_Experience = (UWORD)ulXp;
+
+    UBYTE ubLevelsGained = 0;
+    /* Level 0 means "never set up" - start the curve at 1 without growing. */
+    if (character->_Level == 0)
+        character->_Level = 1;
+
+    while (character->_Experience >= characterXpToNextLevel(character->_Level)) {
+        character->_Experience -= characterXpToNextLevel(character->_Level);
+        character->_Level++;
+        /* Grow a little each level; keep the numbers readable in the HUD. */
+        character->_MaxHP += 5;
+        character->_HP = character->_MaxHP;
+        if (character->_Attack < 255)
+            character->_Attack++;
+        if (character->_Defense < 255)
+            character->_Defense++;
+        ubLevelsGained++;
+        if (ubLevelsGained >= 20)
+            break;
+    }
+    return ubLevelsGained;
 }

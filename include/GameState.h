@@ -20,6 +20,8 @@ typedef struct {
     UBYTE _top;
     BOOL _conditionMet; // Tracks if the most recent IF condition was true
     BOOL _skippingBlock; // Tracks if we are skipping lines due to a false IF or a true IF followed by ELSE
+    /** Set while an ELSE_GOTO is deciding, so the next IF knows who owns the jump. */
+    BOOL _inElseGoto;
     UWORD _scriptProgramCounter; // Program counter for script execution
 } tScriptState;
 
@@ -55,6 +57,11 @@ extern UBYTE g_ubGameStateLoadedFromFile;
 
 /* Set by script EVENT_WIN; game loop transitions to win state when 1 */
 extern UBYTE g_ubRequestWin;
+
+/* Set by script EVENT_CHANGELEVEL; game loop performs the swap when non-zero. */
+extern UBYTE g_ubRequestLevel;
+/* Level index for the pending g_ubRequestLevel swap. */
+extern UBYTE g_ubRequestLevelId;
 
 UBYTE LoadGameState(const char* fileName);
 UBYTE SaveGameState(const char* fileName);

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <ace/types.h>
+#include <ace/utils/bitmap.h>
 
 // Item flags (bitmask) - flexible properties
 #define ITEM_FLAG_EQUIPPABLE 0x01    // Can be equipped
@@ -58,3 +59,11 @@ void itemSystemDestroy(void);
 tItem* getItem(UBYTE ubIndex);
 UBYTE findItemByName(const char* pszName);
 UBYTE findItemByKeyId(UBYTE ubKeyId);
+
+/** Load data/items/{index}_d{0-3}.bm and {index}_ui.bm. Safe to call again. */
+void itemGfxLoad(void);
+void itemGfxDestroy(void);
+/** Floor sprite. Depth 0 is the nearest floor. Returns 0 when that item has no art. */
+UBYTE itemGfxFloor(UBYTE itemIdx, UBYTE depth, tBitMap **ppGfx, tBitMap **ppMask);
+/** Icon for the pack and equipment slots. */
+UBYTE itemGfxHud(UBYTE itemIdx, tBitMap **ppGfx, tBitMap **ppMask);

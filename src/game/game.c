@@ -26,6 +26,7 @@
 #include "wallset.h"
 #include "game_manifest.h"
 #include "game_time.h"
+#include <ace/managers/timer.h>
 #ifdef ACE_HOST
 #include <host_os.h>
 #endif
@@ -83,6 +84,59 @@ tBitMap *pBackground = NULL;
 static ULONG s_ulSampleSize;
 UWORD *g_pModSamples;
 tPtplayerMod *pMod;
+static tBitMap *s_pUiPlayfield = NULL;
+
+static void drawItemIcon(tBitMap *dst, WORD x, WORD y, WORD sw, WORD sh, UBYTE itemIdx)
+{
+    tBitMap *gfx = NULL;
+    tBitMap *msk = NULL;
+    WORD iw;
+    WORD ih;
+    WORD dx;
+    WORD dy;
+    if (s_pUiPlayfield)
+        blitCopy(s_pUiPlayfield, x, y, dst, x, y, sw, sh, MINTERM_COPY);
+    if (itemIdx == 255)
+        return;
+    if (!itemGfxHud(itemIdx, &gfx, &msk) || !gfx || !msk || !msk->Planes[0])
+        return;
+    iw = (WORD)(gfx->BytesPerRow * 8);
+    ih = (WORD)gfx->Rows;
+    dx = 0;
+    dy = 0;
+    if (iw > sw) {
+        dx = (iw - sw) / 2;
+        iw = sw;
+    }
+    if (ih > sh) {
+        dy = (ih - sh) / 2;
+        ih = sh;
+    }
+    blitUnsafeCopyMask(gfx, dx, dy, dst, x + (sw - iw) / 2, y + (sh - ih) / 2,
+        iw, ih, (UBYTE *)msk->Planes[0]);
+}
+
+static void drawItemHud(tBitMap *dst)
+{
+    static const WORD invX[6] = {252, 285, 252, 285, 252, 285};
+    static const WORD invY[6] = {145, 145, 176, 176, 208, 208};
+    static const WORD eqX[4] = {252, 285, 252, 285};
+    static const WORD eqY[4] = {8, 8, 92, 92};
+    tInventory *inv;
+    UBYTE s;
+    if (!dst || !g_pGameState || !g_pGameState->m_pInventory)
+        return;
+    inv = g_pGameState->m_pInventory;
+    for (s = 0; s < 6; s++) {
+        UWORD idx = (UWORD)inv->ubShowInventoryIndex + s;
+        UBYTE itemIdx = 255;
+        if (idx < inv->ubItemCount)
+            itemIdx = inv->pItems[idx];
+        drawItemIcon(dst, invX[s], invY[s], 30, 28, itemIdx);
+    }
+    for (s = 0; s < 4; s++)
+        drawItemIcon(dst, eqX[s], eqY[s], 30, 28, inv->pEquippedItem[s]);
+}
 
 UBYTE g_ubGameActive = 0;
 UBYTE g_ubRedrawRequire = 0;
@@ -92,6 +146,18 @@ tBitMap *temp = NULL;
 // Track which movement button is currently pressed (for repeat-while-held)
 static UBYTE s_ubPressedMovementButton = 0;
 static UBYTE s_ubPressedTurnButton = 0;
+
+// Melee pacing: one exchange per MELEE_TICKS, not once per frame.
+#define MELEE_TICKS 25u
+static ULONG s_ulLastMelee = 0;
+static UBYTE s_ubMeleePrimed = 0;
+
+/** Restart the melee clock; called from fadeInComplete so a new run starts clean. */
+static void meleeReset(void)
+{
+    s_ulLastMelee = g_sTimerManager.ulGameTicks;
+    s_ubMeleePrimed = 1;
+}
 
 // Text renderer variables
 static tTextRenderer *s_pTextRenderer = NULL;
@@ -246,8 +312,52 @@ static void addMessage(const char *szMessage, eMessageType eType, UBYTE ubColor)
 
 void gameDisplayMessage(const char* szMessage)
 {
+    /* Story belongs in the view. The bottom strip is two short lines and
+     * swallows anything longer than a combat tick. */
     if (szMessage)
-        addMessage(szMessage, MESSAGE_TYPE_SMALL, 1);
+        addMessage(szMessage, MESSAGE_TYPE_VIEWPORT, 8);
+}
+
+/** Maze string 0 is the floor's arrival line. Shown once the font exists. */
+static void gameAnnounceLevel(void)
+{
+    char buf[512];
+    if (!g_pGameState || !g_pGameState->m_pCurrentMaze)
+        return;
+    if (!mazeGetStringByIndex(g_pGameState->m_pCurrentMaze, 0, buf, (UWORD)sizeof(buf)))
+        return;
+    logWrite("[game] level text: %s\n", buf);
+    gameDisplayMessage(buf);
+}
+
+/** What the thing is, for the floor and for a click on the pack. */
+static const char *itemFlavour(UBYTE itemIdx)
+{
+    switch (itemIdx) {
+    case 0:
+        return "{c:8}A rusty pipe, heavy enough to matter.\nRight-click it in the pack to heft it.";
+    case 1:
+        return "{c:8}Scrap plate, wired into a vest.\nIt will turn a claw if you wear it. Right-click to put it on.";
+    case 2:
+        return "{c:12}A brass cell key.{c:8}\nThe south lock in the intake was cut for these teeth.";
+    case 3:
+        return "{c:12}A blue vault key.{c:8}\nStill warm from someone else's pocket.";
+    case 4:
+        return "{c:8}A medpack. The seal is intact.\nEighteen points of mercy in a white box.";
+    case 5:
+        return "{c:12}An orange key, stamped CORE.{c:8}\nThe last door knows these teeth.";
+    default:
+        return NULL;
+    }
+}
+
+static void showItemFlavour(UBYTE itemIdx, const char *pszName)
+{
+    const char *line = itemFlavour(itemIdx);
+    if (line)
+        addMessage(line, MESSAGE_TYPE_VIEWPORT, 8);
+    else if (pszName)
+        addMessage(pszName, MESSAGE_TYPE_VIEWPORT, 8);
 }
 
 void handleEquipmentClicked(WORD slotID)
@@ -256,10 +366,10 @@ void handleEquipmentClicked(WORD slotID)
         UBYTE itemIdx = g_pGameState->m_pInventory->pEquippedItem[slotID];
         if (itemIdx != 255) {
             tItem* pItem = getItem(itemIdx);
-            if (pItem && pItem->pszName)
-                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+            if (pItem)
+                showItemFlavour(itemIdx, pItem->pszName);
             else
-                addMessage("Equipment", MESSAGE_TYPE_SMALL, 1);
+                addMessage("Equipment", MESSAGE_TYPE_VIEWPORT, 8);
         }
     }
 }
@@ -283,8 +393,10 @@ void handleEquipmentUsed(WORD slotID)
 
     if (inventoryHasItem(g_pGameState->m_pInventory, itemIdx)) {
         if (inventoryUseItem(g_pGameState->m_pInventory, itemIdx, hero)) {
-            if (pItem->pszName)
-                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+            if (pItem->ubUsageType == ITEM_USAGE_HEAL)
+                addMessage("{c:10}The medpack bites.{c:8}\nThe pain steps back.", MESSAGE_TYPE_VIEWPORT, 8);
+            else if (pItem->pszName)
+                addMessage(pItem->pszName, MESSAGE_TYPE_VIEWPORT, 8);
             g_ubRedrawRequire = 2;
         } else {
             addMessage("Cannot use that now.", MESSAGE_TYPE_SMALL, 1);
@@ -299,12 +411,14 @@ void handleEquipmentUsed(WORD slotID)
             hero->_HP = hero->_MaxHP;
         if (pItem->ubFlags & ITEM_FLAG_CONSUMABLE)
             g_pGameState->m_pInventory->pEquippedItem[slotID] = 255;
-        if (pItem->pszName)
-            addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+        if (pItem->ubUsageType == ITEM_USAGE_HEAL)
+            addMessage("{c:10}The medpack bites.{c:8}\nThe pain steps back.", MESSAGE_TYPE_VIEWPORT, 8);
+        else if (pItem->pszName)
+            addMessage(pItem->pszName, MESSAGE_TYPE_VIEWPORT, 8);
         g_ubRedrawRequire = 2;
         return;
     }
-    addMessage("Cannot use that.", MESSAGE_TYPE_SMALL, 1);
+    addMessage("{c:8}It does nothing in your hands.", MESSAGE_TYPE_VIEWPORT, 8);
 }
 
 void handleInventoryClicked(WORD slotID)
@@ -314,9 +428,51 @@ void handleInventoryClicked(WORD slotID)
         if (idx < g_pGameState->m_pInventory->ubItemCount) {
             UBYTE itemIdx = g_pGameState->m_pInventory->pItems[idx];
             tItem* pItem = getItem(itemIdx);
-            if (pItem && pItem->pszName)
-                addMessage(pItem->pszName, MESSAGE_TYPE_SMALL, 1);
+            if (pItem)
+                showItemFlavour(itemIdx, pItem->pszName);
         }
+    }
+}
+
+/**
+ * Right-click on a pack slot: equip the item into its declared slot.
+ * Falls back to "slot 0" for equippables that never set ubEquipSlot.
+ */
+void handleInventoryEquip(WORD slotID)
+{
+    if (slotID < 0 || slotID >= 6 || !g_pGameState || !g_pGameState->m_pInventory)
+        return;
+    tInventory *inv = g_pGameState->m_pInventory;
+    UWORD idx = inv->ubShowInventoryIndex + (UWORD)slotID;
+    if (idx >= inv->ubItemCount)
+        return;
+
+    UBYTE itemIdx = inv->pItems[idx];
+    tItem *pItem = getItem(itemIdx);
+    if (!pItem)
+        return;
+    if (!(pItem->ubFlags & ITEM_FLAG_EQUIPPABLE)) {
+        addMessage("{c:8}That will not sit on you.", MESSAGE_TYPE_VIEWPORT, 8);
+        return;
+    }
+
+    UBYTE ubSlot = (pItem->ubEquipSlot < 4) ? pItem->ubEquipSlot : 0;
+    if (inventoryEquipItem(inv, itemIdx, ubSlot)) {
+        const char *worn = NULL;
+        if (itemIdx == 0)
+            worn = "{c:10}You heft the pipe.{c:8}\nIt will do, until something better turns up.";
+        else if (itemIdx == 1)
+            worn = "{c:10}The vest sits wrong.{c:8}\nClose enough. Claws will have to work for it.";
+        if (worn)
+            addMessage(worn, MESSAGE_TYPE_VIEWPORT, 8);
+        else {
+            char szBuf[96];
+            sprintf(szBuf, "Equipped %s", pItem->pszName ? pItem->pszName : "item");
+            addMessage(szBuf, MESSAGE_TYPE_VIEWPORT, 8);
+        }
+        g_ubRedrawRequire = 2;
+    } else {
+        addMessage("{c:8}It will not stay on.", MESSAGE_TYPE_VIEWPORT, 8);
     }
 }
 
@@ -343,6 +499,9 @@ void handleMapClicked(void)
 /** Non-zero if a step/turn is allowed; consumes the cooldown when it is. */
 static UBYTE gameConsumePartyAction(void)
 {
+    /* The last line is on screen. Let it be read before the win screen. */
+    if (g_ubRequestWin)
+        return 0;
 #ifdef ACE_HOST
 	/* Wall-clock gate: host loop rate is not a reliable 50 Hz VBL. */
 	static uint64_t s_nextAllowed = 0;
@@ -390,14 +549,73 @@ static void handleEventTrigger(void)
     }
 }
 
+/** Walk the floor stack under the party and put what fits into the pack. */
+static void groundItemsPickupAtParty(void)
+{
+    if (!g_pGameState || !g_pGameState->m_pInventory || !g_pGameState->m_pCurrentParty)
+        return;
+    UBYTE x = g_pGameState->m_pCurrentParty->_PartyX;
+    UBYTE y = g_pGameState->m_pCurrentParty->_PartyY;
+    tGroundItemList *list = &g_pGameState->m_groundItems;
+    for (UBYTE i = 0; i < list->count; i++) {
+        tGroundItem *g = &list->items[i];
+        if (g->x != x || g->y != y)
+            continue;
+        tItem *pItem = getItem(g->itemIdx);
+        if (!pItem)
+            continue;
+        if (!inventoryAddItem(g_pGameState->m_pInventory, g->itemIdx, g->qty))
+            continue;
+        showItemFlavour(g->itemIdx, pItem->pszName);
+        groundItemRemoveAt(list, x, y, g->itemIdx, g->qty);
+        g_ubRedrawRequire = 2;
+        return; /* list shifted down; next step picks up the next stack */
+    }
+}
+
+static UBYTE triggerPadAt(UBYTE x, UBYTE y);
+
 static void afterPartyMoved(void)
 {
+    if (s_lastMoveResult == 3 && g_pGameState && g_pGameState->m_pCurrentParty)
+        triggerPadAt(g_pGameState->m_pCurrentParty->_PartyX,
+            g_pGameState->m_pCurrentParty->_PartyY);
     handleEventTrigger();
     if ((s_lastMoveResult == 1 || s_lastMoveResult == 3) && g_pGameState && g_pGameState->m_pCurrentMaze
         && g_pGameState->m_pCurrentParty) {
         pressurePlatesTryFireAt(&g_pGameState->m_pressurePlates, g_pGameState->m_pCurrentMaze,
             g_pGameState->m_pCurrentParty->_PartyX, g_pGameState->m_pCurrentParty->_PartyY);
+        groundItemsPickupAtParty();
     }
+}
+
+/** Lift and exit pads. Returns 1 when a level swap or a win was just armed. */
+static UBYTE triggerPadAt(UBYTE x, UBYTE y)
+{
+    tMaze *pMaze;
+    tMazeEvent *e;
+    if (!g_pGameState || !g_pGameState->m_pCurrentMaze)
+        return 0;
+    pMaze = g_pGameState->m_pCurrentMaze;
+    for (e = pMaze->_events; e; e = e->_next) {
+        if (e->_x != x || e->_y != y)
+            continue;
+        if (e->_eventType == EVENT_CHANGELEVEL && e->_eventData && e->_eventDataSize >= 1) {
+            if (g_ubRequestLevel)
+                return 1;
+            g_ubRequestLevelId = e->_eventData[0];
+            g_ubRequestLevel = 1;
+            addMessage("{c:12}The cage drops.{c:8}", MESSAGE_TYPE_VIEWPORT, 8);
+            logWrite("Change level requested: %u\n", (unsigned)g_ubRequestLevelId);
+            return 1;
+        }
+        if (e->_eventType == EVENT_WIN) {
+            if (!g_ubRequestWin)
+                g_ubRequestWin = 1;
+            return 1;
+        }
+    }
+    return 0;
 }
 
 static void updateStandingOnEventTrigger(void)
@@ -408,6 +626,11 @@ static void updateStandingOnEventTrigger(void)
         g_pGameState->m_pCurrentParty->_PartyY);
     
     if (cellType == MAZE_EVENT_TRIGGER) {
+        /* A lift keeps working if you are already standing on it. The step
+         * that landed there can be eaten by the move timer before the script runs. */
+        if (triggerPadAt(g_pGameState->m_pCurrentParty->_PartyX,
+                g_pGameState->m_pCurrentParty->_PartyY))
+            return;
         tMazeEvent* pEvent = mazeFindEventAtPosition(g_pGameState->m_pCurrentMaze, 
             g_pGameState->m_pCurrentParty->_PartyX, 
             g_pGameState->m_pCurrentParty->_PartyY);
@@ -492,6 +715,27 @@ void cbGameOnHovered(Region *pRegion)
     }
 }
 
+static void showLockedDoor(tDoorLock *pLock)
+{
+    const char *msg = "{c:9}Locked.{c:8}\nThe mechanism wants a key you are not holding.";
+    if (pLock) {
+        switch (pLock->_keyId) {
+        case 1:
+            msg = "{c:9}Locked.{c:8}\nStamped CELL. The brass key from this hall is the only fit.";
+            break;
+        case 2:
+            msg = "{c:9}Locked.{c:8}\nA vault lock. It wants the blue key.";
+            break;
+        case 3:
+            msg = "{c:9}Locked.{c:8}\nThe core lock. The orange key is still in the guard's fist.";
+            break;
+        default:
+            break;
+        }
+    }
+    addMessage(msg, MESSAGE_TYPE_VIEWPORT, 8);
+}
+
 void handleDoorClick(UBYTE x, UBYTE y)
 {
     tMaze* pMaze = g_pGameState->m_pCurrentMaze;
@@ -513,12 +757,12 @@ void handleDoorClick(UBYTE x, UBYTE y)
                     tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
                     handleEvent(pMaze, pEvent);
                     mazeRemoveEvent(pMaze, pEvent);
+                    addMessage("{c:10}The bolt scrapes back.{c:8}", MESSAGE_TYPE_VIEWPORT, 8);
                     g_ubRedrawRequire = 2;
                 }
                 else
                 {
-                    // Door is locked and player doesn't have key
-                    addMessage("Door is locked.", MESSAGE_TYPE_SMALL, 1);
+                    showLockedDoor(pLock);
                 }
             }
             else
@@ -528,6 +772,7 @@ void handleDoorClick(UBYTE x, UBYTE y)
                 tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
                 handleEvent(pMaze, pEvent);
                 mazeRemoveEvent(pMaze, pEvent);
+                addMessage("{c:8}The hatch complains, then gives.", MESSAGE_TYPE_VIEWPORT, 8);
                 g_ubRedrawRequire = 2;
             }
         }
@@ -540,6 +785,7 @@ void handleDoorClick(UBYTE x, UBYTE y)
             tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_CLOSEDOOR, 0, eventData);
             handleEvent(pMaze, pEvent);
             mazeRemoveEvent(pMaze, pEvent);
+            addMessage("{c:8}You pull it to.", MESSAGE_TYPE_VIEWPORT, 8);
             g_ubRedrawRequire = 2;
         }
         break;
@@ -558,12 +804,12 @@ void handleDoorClick(UBYTE x, UBYTE y)
                     tMazeEvent* pEvent = mazeEventCreate(x, y, EVENT_OPENDOOR, 0, eventData);
                     handleEvent(pMaze, pEvent);
                     mazeRemoveEvent(pMaze, pEvent);
+                    addMessage("{c:10}The bolt scrapes back.{c:8}", MESSAGE_TYPE_VIEWPORT, 8);
                     g_ubRedrawRequire = 2;
                 }
                 else
                 {
-                    // Door is locked and player doesn't have key
-                    addMessage("Door is locked.", MESSAGE_TYPE_SMALL, 1);
+                    showLockedDoor(pLock);
                 }
             }
         }
@@ -650,6 +896,8 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
     case GAME_UI_GADGET_INV_SLOT_6:
         if (ubLeft)
             handleInventoryClicked(id - GAME_UI_GADGET_INV_SLOT_1);
+        if (ubRight)
+            handleInventoryEquip(id - GAME_UI_GADGET_INV_SLOT_1);
         break;
     case GAME_UI_GADGET_INV_DOWN:
     case GAME_UI_GADGET_INV_UP:
@@ -665,6 +913,11 @@ void cbGameOnPressed(Region *pRegion, UBYTE ubLeft, UBYTE ubRight)
             viewportPickAtScreen(g_pGameState, mouseGetX(MOUSE_PORT_1), mouseGetY(MOUSE_PORT_1), &pick);
             if (pick.kind == VIEWPORT_PICK_DOOR_AHEAD)
                 handleDoorClick(pick.cellX, pick.cellY);
+            else if (pick.kind == VIEWPORT_PICK_FLOOR_AHEAD) {
+                /* Clicking the grate is the lift. Do not wait on the step timer. */
+                if (!triggerPadAt(pick.cellX, pick.cellY))
+                    MoveForwards();
+            }
             else if (pick.kind == VIEWPORT_PICK_WALL_BUTTON || pick.kind == VIEWPORT_PICK_DOOR_BUTTON)
                 handleButtonClick(pick.cellX, pick.cellY, pick.wallSide);
         }
@@ -699,6 +952,22 @@ static void fadeInComplete(void)
 {
     g_ubGameActive = 1;
     gameTimeReset1s();
+    meleeReset();
+#ifdef GAME_DEBUG_TITLE_MOUSE
+    {
+        tCharacterParty *p = g_pGameState->m_pCurrentParty;
+        logWrite("[game] fadeInComplete: members=%u battery=%u\n",
+            (unsigned)p->_numCharacters, (unsigned)p->_BatteryLevel);
+        for (UBYTE i = 0; i < p->_numCharacters; i++) {
+            tCharacter *c = p->_characters[i];
+            logWrite("[game]  [%u] %s hp=%u/%u lvl=%u atk=%u def=%u\n",
+                (unsigned)i, c ? c->_Name : "(null)",
+                c ? (unsigned)c->_HP : 0, c ? (unsigned)c->_MaxHP : 0,
+                c ? (unsigned)c->_Level : 0, c ? (unsigned)c->_Attack : 0,
+                c ? (unsigned)c->_Defense : 0);
+        }
+    }
+#endif
 }
 
 static void gameReloadPalette(void)
@@ -852,17 +1121,22 @@ static void gameGsCreate(void)
         s_pTextRenderer = textRendererCreate(s_pTestFont);
         if (s_pTextRenderer) {
             s_ubTextRendererInitialized = 1;
+            gameAnnounceLevel();
         }
     }
     
-    tBitMap *pPlayfield = bitmapCreateFromPath("data/playfield.bm", 0);
-    blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pBack, 0, 0, 320, 256);
-    // ScreenUpdate();
-    blitCopyAligned(pPlayfield, 0, 0, pScreen->_pBfr->pFront, 0, 0, 320, 256);
-    bitmapDestroy(pPlayfield);
+    if (s_pUiPlayfield)
+        bitmapDestroy(s_pUiPlayfield);
+    s_pUiPlayfield = bitmapCreateFromPath("data/playfield.bm", 0);
+    if (s_pUiPlayfield) {
+        blitCopyAligned(s_pUiPlayfield, 0, 0, pScreen->_pBfr->pBack, 0, 0, 320, 256);
+        blitCopyAligned(s_pUiPlayfield, 0, 0, pScreen->_pBfr->pFront, 0, 0, 320, 256);
+    }
     // do an initial render to both front and back.
     drawView(g_pGameState, pScreen->_pBfr->pBack);
     drawView(g_pGameState, pScreen->_pBfr->pFront);
+    drawItemHud(pScreen->_pBfr->pBack);
+    drawItemHud(pScreen->_pBfr->pFront);
     
     
     systemUnuse();
@@ -876,34 +1150,148 @@ static void gameGsCreate(void)
     logBlockEnd("gameGsCreate()");
 }
 
-/** Runs every frame: melee while party shares a cell with an aggressive monster (outside the ~1 Hz world tick). */
-static void gameProcessMeleeCombat(void)
+/** Non-zero once the melee period elapses. First call after reset starts the clock. */
+static UBYTE meleeReady(void)
 {
+    if (!s_ubMeleePrimed)
+        meleeReset();
+    return gameTimeCheckPeriod(&s_ulLastMelee, MELEE_TICKS);
+}
+
+/** Sum a modifier type across every equipped slot. */
+static UWORD equippedModifierTotal(tInventory *pInv, UBYTE ubModType)
+{
+    UWORD uwTotal = 0;
+    if (!pInv)
+        return 0;
+    for (UBYTE s = 0; s < 4; s++) {
+        UBYTE ubItem = pInv->pEquippedItem[s];
+        if (ubItem == 255)
+            continue;
+        tItem *pItem = getItem(ubItem);
+        if (!pItem || pItem->ubModifierType != ubModType)
+            continue;
+        uwTotal += pItem->ubModifier;
+    }
+    return uwTotal;
+}
+
+/** Attack as it should be used in a fight: base stat plus equipment. */
+static UWORD effectiveAttack(tCharacter *pChar)
+{
+    ULONG ulAtk = (ULONG)pChar->_Attack
+        + equippedModifierTotal(g_pGameState->m_pInventory, ITEM_MOD_ATTACK);
+    return (UWORD)(ulAtk > 255ul ? 255ul : ulAtk);
+}
+
+/** Defense as it should be used when the party takes a hit. */
+static UWORD effectiveDefense(tCharacter *pChar)
+{
+    ULONG ulDef = (ULONG)pChar->_Defense
+        + equippedModifierTotal(g_pGameState->m_pInventory, ITEM_MOD_DEFENSE);
+    return (UWORD)(ulDef > 255ul ? 255ul : ulDef);
+}
+
+/**
+ * Attack/defense live in UBYTE fields, so equipment totals must be clamped
+ * before being written back. Defence saturates at 255 and that is intentional.
+ */
+static UBYTE clampStatByte(UWORD uwValue)
+{
+    return (UBYTE)(uwValue > 255u ? 255u : uwValue);
+}
+
+/** "Hero hits rat for 4" - colour 9 is red in the text palette. */
+static void showDamageMessage(const char *szWho, const char *szTarget, UWORD uwDamage)
+{
+    char szBuf[64];
+    sprintf(szBuf, "{c:9}%s hits %s for %u", szWho, szTarget, (unsigned)uwDamage);
+    addMessage(szBuf, MESSAGE_TYPE_SMALL, 1);
+    /* Mirror to the log so headless/automated runs can verify combat happened. */
+    logWrite("[combat] %s hits %s for %u\n", szWho, szTarget, (unsigned)uwDamage);
+}
+
+/**
+ * Melee while the party shares a cell with an aggressive monster.
+ * Gated to MELEE_TICKS so a 50 Hz loop does not trade hits every frame.
+ * @return non-zero when a living party member died this exchange.
+ */
+static UBYTE gameProcessMeleeCombat(void)
+{
+    UBYTE ubPartyMemberDied = 0;
+    if (!g_pGameState || !g_pGameState->m_pMonsterList || !g_pGameState->m_pCurrentParty)
+        return 0;
+    if (!meleeReady())
+        return 0;
+
+    tCharacterParty *party = g_pGameState->m_pCurrentParty;
     for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
         tMonster *monster = g_pGameState->m_pMonsterList->_monsters[i];
         if (!monster || monster->_state == MONSTER_STATE_DEAD)
             continue;
         if (monster->_state != MONSTER_STATE_AGGRESSIVE)
             continue;
-        if (monster->_partyPosX != g_pGameState->m_pCurrentParty->_PartyX ||
-            monster->_partyPosY != g_pGameState->m_pCurrentParty->_PartyY)
+        if (monster->_partyPosX != party->_PartyX ||
+            monster->_partyPosY != party->_PartyY)
             continue;
-        if (g_pGameState->m_pCurrentParty->_numCharacters <= 0)
+
+        tCharacter *hero = characterPartyGetAlive(party);
+        if (!hero)
             continue;
-        tCharacter *hero = g_pGameState->m_pCurrentParty->_characters[0];
-        monsterAttack(monster, hero);
-        if (hero->_HP > 0 && monster->_state != MONSTER_STATE_DEAD)
-            monsterTakeDamageFromCharacter(monster, hero);
+
+        /* Swap in effective stats so equipped armour and weapons matter. */
+        UBYTE ubBaseDefense = hero->_Defense;
+        UBYTE ubBaseAttack = hero->_Attack;
+        hero->_Defense = clampStatByte(effectiveDefense(hero));
+        hero->_Attack = clampStatByte(effectiveAttack(hero));
+
+        UWORD uwIncoming = monsterAttack(monster, hero);
+        if (uwIncoming) {
+            showDamageMessage(monsterNameForType(monster->_monsterType), hero->_Name, uwIncoming);
+        }
+        if (hero->_HP == 0) {
+            hero->_Defense = ubBaseDefense;
+            hero->_Attack = ubBaseAttack;
+            ubPartyMemberDied = 1;
+            continue;
+        }
+        if (monster->_state == MONSTER_STATE_DEAD) {
+            hero->_Defense = ubBaseDefense;
+            hero->_Attack = ubBaseAttack;
+            continue;
+        }
+
+        UWORD uwDealt = monsterTakeDamageFromCharacter(monster, hero);
+        hero->_Defense = ubBaseDefense;
+        hero->_Attack = ubBaseAttack;
+        if (uwDealt) {
+            showDamageMessage(hero->_Name, monsterNameForType(monster->_monsterType), uwDealt);
+        }
         if (monster->_base._HP == 0) {
             monster->_state = MONSTER_STATE_DEAD;
+            logWrite("[combat] %s slain by %s (xp=%u)\n",
+                monsterNameForType(monster->_monsterType), hero->_Name,
+                (unsigned)monster->_experienceValue);
             monsterDropLoot(monster, g_pGameState->m_pInventory);
-            for (UBYTE j = 0; j < g_pGameState->m_pCurrentParty->_numCharacters; j++) {
-                if (g_pGameState->m_pCurrentParty->_characters[j])
-                    g_pGameState->m_pCurrentParty->_characters[j]->_Experience += monster->_experienceValue;
+            UWORD uwXp = monster->_experienceValue;
+            for (UBYTE j = 0; j < party->_numCharacters; j++) {
+                tCharacter *pChar = party->_characters[j];
+                if (!pChar)
+                    continue;
+                UBYTE ubGained = characterAwardXp(pChar, uwXp);
+                if (ubGained) {
+                    char szBuf[64];
+                    sprintf(szBuf, "{c:10}%s reaches level %u", pChar->_Name, (unsigned)pChar->_Level);
+                    addMessage(szBuf, MESSAGE_TYPE_SMALL, 1);
+                    logWrite("[combat] %s reaches level %u (xp=%u hp=%u/%u)\n",
+                        pChar->_Name, (unsigned)pChar->_Level, (unsigned)pChar->_Experience,
+                        (unsigned)pChar->_HP, (unsigned)pChar->_MaxHP);
+                }
             }
             g_ubRedrawRequire = 2;
         }
     }
+    return ubPartyMemberDied;
 }
 
 static void gameGsLoop(void)
@@ -911,23 +1299,74 @@ static void gameGsLoop(void)
     if (g_ubGameActive)
     {
         if (g_ubRequestWin) {
-            g_ubRequestWin = 0;
-            ptplayerEnableMusic(0);
-            ptplayerModDestroy(pMod);
-            stateChange(g_pStateMachineGame, &g_sStateWin);
-            return;
+            /* The win pad's line is posted on the step, after this frame has
+             * already drawn. Hold long enough for the next frames to show it. */
+            static ULONG s_ulWinShown = 0;
+            static UBYTE s_ubWinHold = 0;
+            if (!s_ubWinHold) {
+                s_ulWinShown = g_sTimerManager.ulGameTicks;
+                s_ubWinHold = 1;
+            }
+            if (timerCheck(&s_ulWinShown, 3u * GAME_TIME_TICKS_PER_SEC)) {
+                s_ubWinHold = 0;
+                g_ubRequestWin = 0;
+                ptplayerEnableMusic(0);
+                ptplayerModDestroy(pMod);
+                stateChange(g_pStateMachineGame, &g_sStateWin);
+                return;
+            }
         }
         if (keyUse(KEY_F9)) {
             statePush(g_pStateMachineGame, &g_sStatePaused);
             return;
         }
+
+        /* Script asked for a level swap. Done here, outside the script, so the
+         * maze being read from is no longer in use. The battery-drain check
+         * below is skipped for this pass: LoadLevel() re-enters the game state
+         * and would see the battery at 0 mid-load otherwise. */
+        if (g_ubRequestLevel) {
+            UBYTE ubTarget = g_ubRequestLevelId;
+            g_ubRequestLevel = 0;
+            g_ubRedrawRequire = 0;
+            if (LoadLevel((BYTE)ubTarget)) {
+                /* Same entrance. The works opens facing the plate, so the
+                 * drop does not look like the room you just left. */
+                if (g_pGameState->m_pCurrentParty) {
+                    g_pGameState->m_pCurrentParty->_PartyX = 2;
+                    g_pGameState->m_pCurrentParty->_PartyY = 2;
+                    g_pGameState->m_pCurrentParty->_PartyFacing = (ubTarget == 1) ? 1 : 0;
+                }
+                logWrite("[game] changed to level %u\n", (unsigned)ubTarget);
+                gameAnnounceLevel();
+                g_ubRedrawRequire = 2;
+            } else {
+                logWrite("[game] change to level %u FAILED\n", (unsigned)ubTarget);
+            }
+            return;
+        }
+
         gameUIUpdate();
 
-        if (g_pGameState->m_pCurrentParty->_BatteryLevel <= 0)
+        /* Run out of battery, or the whole party falls, and the run is over. */
         {
-            ScreenFadeToBlack(NULL, 7, fadeCompleteNoBat);
-            g_ubGameActive = 0;
-            g_ubRedrawRequire = 0;
+            UBYTE ubBatteryOut = g_pGameState->m_pCurrentParty->_BatteryLevel <= 0;
+            UBYTE ubPartyDown = characterPartyAllDead(g_pGameState->m_pCurrentParty);
+            if (ubBatteryOut || ubPartyDown) {
+                tCharacter *pFirst = g_pGameState->m_pCurrentParty->_characters[0];
+                logWrite("[game] run over: battery=%u batteryOut=%u partyDown=%u "
+                    "heroHP=%u pos=(%u,%u) monsters=%u\n",
+                    (unsigned)g_pGameState->m_pCurrentParty->_BatteryLevel,
+                    (unsigned)ubBatteryOut, (unsigned)ubPartyDown,
+                    (unsigned)(pFirst ? pFirst->_HP : 0),
+                    (unsigned)g_pGameState->m_pCurrentParty->_PartyX,
+                    (unsigned)g_pGameState->m_pCurrentParty->_PartyY,
+                    (unsigned)(g_pGameState->m_pMonsterList
+                        ? g_pGameState->m_pMonsterList->_numMonsters : 0));
+                ScreenFadeToBlack(NULL, 7, fadeCompleteNoBat);
+                g_ubGameActive = 0;
+                g_ubRedrawRequire = 0;
+            }
         }
 
         // Update door animations
@@ -959,7 +1398,31 @@ static void gameGsLoop(void)
                 g_ubRedrawRequire = 2;
         }
 
-        gameProcessMeleeCombat();
+        if (gameProcessMeleeCombat()) {
+            /* A party member just dropped; redraw so the party/HUD reflects it. */
+            g_ubRedrawRequire = 2;
+        }
+
+        {
+            static UBYTE s_animDiv = 0;
+            if (++s_animDiv >= 8) {
+                UBYTE anim = 0;
+                s_animDiv = 0;
+                if (g_pGameState->m_pMonsterList) {
+                    for (UBYTE i = 0; i < g_pGameState->m_pMonsterList->_numMonsters; i++) {
+                        tMonster *monster = g_pGameState->m_pMonsterList->_monsters[i];
+                        if (!monster || monster->_state == MONSTER_STATE_DEAD)
+                            continue;
+                        if (monsterGfxFrameCount(monster->_monsterType) > 1)
+                            anim = 1;
+                    }
+                }
+                if (anim) {
+                    monsterGfxAdvance();
+                    g_ubRedrawRequire = 2;
+                }
+            }
+        }
 
         if (g_ubRedrawRequire)
         {
@@ -967,6 +1430,7 @@ static void gameGsLoop(void)
                 drawFullScreenMap(g_pGameState, pScreen->_pBfr->pBack);
             else
                 drawView(g_pGameState, pScreen->_pBfr->pBack);
+            drawItemHud(pScreen->_pBfr->pBack);
             g_ubRedrawRequire--;
         }
 
@@ -1431,6 +1895,10 @@ static void gameGsDestroy(void)
         ptplayerEnableMusic(0);
         ptplayerModDestroy(pMod);
         pMod = NULL;
+    }
+    if (s_pUiPlayfield) {
+        bitmapDestroy(s_pUiPlayfield);
+        s_pUiPlayfield = NULL;
     }
     s_ubTextRendererInitialized = 0;
     

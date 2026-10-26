@@ -155,6 +155,7 @@ tWallset *wallsetLoad(const char *fileName)
 			}
 		}
 
+		fileClose(pFile);
 		systemUnuse();
 		return pWallset;
 	}

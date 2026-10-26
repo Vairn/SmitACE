@@ -134,6 +134,17 @@ typedef enum {
 
 #define EVENT_BATTERY_CHARGER 221
 
+/**
+ * Jump to another level from the manifest level list.
+ * Payload: 1 byte, level index.
+ * The level swap is deferred to the game loop (see g_ubRequestLevel) because a
+ * script runs while the maze it is reading from is still in use.
+ */
+#define EVENT_CHANGELEVEL 222
+
+/** Payload of EVENT_CHANGELEVEL. */
+#define EVENT_CHANGELEVEL_DATA_SIZE 1
+
 // Function declarations
 void handleEvent(tMaze *pMaze, tMazeEvent *pEvent);
 void createEventTrigger(tMaze* pMaze, UBYTE x, UBYTE y, UBYTE eventType, UBYTE eventDataSize, UBYTE* eventData);

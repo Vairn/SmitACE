@@ -1,11 +1,20 @@
 #include "smite.h"
 #include "screen.h"
+#include "GameState.h"
 
 #include <ace/managers/key.h>
 #include <ace/managers/joy.h>
 #include <ace/managers/mouse.h>
+#include <ace/managers/system.h>
 
-static void pausedGsCreate(void) {}
+static void pausedGsCreate(void)
+{
+	/* Reaching pause is the natural save point: the title's "Load Game"
+	 * needs a file to exist, and nothing else ever writes one. */
+	systemUse();
+	SaveGameState("data/save.dat");
+	systemUnuse();
+}
 
 static void pausedGsDestroy(void) {}
 

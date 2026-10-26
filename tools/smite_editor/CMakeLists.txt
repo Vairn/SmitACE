@@ -45,6 +45,7 @@ add_executable(smite_editor
 	src/gl_extra.cpp
 	src/dungeon_gl.cpp
 	src/dungeon_atlas.cpp
+	src/maze_editor.cpp
 	${IMGUI_DIR}/misc/cpp/imgui_stdlib.cpp
 	${IMGUI_DIR}/imgui.cpp
 	${IMGUI_DIR}/imgui_draw.cpp
